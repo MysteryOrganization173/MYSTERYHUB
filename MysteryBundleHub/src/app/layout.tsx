@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { ThemeProvider } from "@/components/shared/ThemeProvider";
-import { Toaster } from "sonner";
+import { AppProviders } from "@/providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -79,28 +78,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          {children}
-          <Toaster
-            position="bottom-right"
-            theme="dark"
-            richColors
-            toastOptions={{
-              style: {
-                background: "hsl(0 0% 7%)",
-                border: "1px solid hsl(0 0% 14%)",
-                color: "hsl(0 0% 97%)",
-              },
-            }}
-          />
-        </ThemeProvider>
+        <AppProviders>{children}</AppProviders>
       </body>
     </html>
   );
