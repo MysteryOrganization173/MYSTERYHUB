@@ -1,61 +1,76 @@
 // ============================================================
-// App-Wide Constants — Mystery Bundle Hub
+// App-Wide Constants — Mystery Hub
 // No magic strings/numbers anywhere else in the codebase.
 // ============================================================
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 export const ROUTES = {
   home:        "/",
-  bundles:     "/bundles",
-  bundle:      (slug: string) => `/bundles/${slug}`,
+  // Primary nav
+  buy:         "/buy",
+  earn:        "/earn",
+  wallet:      "/wallet",
+  dashboard:   "/dashboard",
+  support:     "/support",
+  // Marketplace & tools
   marketplace: "/marketplace",
-  howItWorks:  "/how-it-works",
-  pricing:     "/pricing",
+  business:    "/business",
+  agent:       "/agent",
   referrals:   "/referrals",
-  affiliates:  "/affiliates",
+  track:       "/track",
+  faq:         "/faq",
   // Auth
   signIn:      "/sign-in",
   signUp:      "/sign-up",
   forgotPassword: "/forgot-password",
-  // Dashboard
-  dashboard:       "/dashboard",
-  dashboardOrders: "/dashboard/orders",
-  dashboardProfile:"/dashboard/profile",
+  // Dashboard sub-routes
+  dashboardOrders:    "/dashboard/orders",
+  dashboardProfile:   "/dashboard/profile",
   dashboardReferrals: "/dashboard/referrals",
+  dashboardWallet:    "/dashboard/wallet",
   // Legal
   privacy:  "/privacy",
   terms:    "/terms",
   cookies:  "/cookies",
-  // Company
+  // Info
   about:    "/about",
   blog:     "/blog",
   contact:  "/contact",
-  help:     "/help",
 } as const;
 
 // ─── API Endpoints ────────────────────────────────────────────────────────────
 export const API = {
-  bundles:       "/api/bundles",
-  bundle:        (slug: string) => `/api/bundles/${slug}`,
-  featured:      "/api/bundles/featured",
-  categories:    "/api/categories",
-  orders:        "/api/orders",
-  order:         (id: string) => `/api/orders/${id}`,
-  reviews:       "/api/reviews",
-  user:          "/api/user",
-  referrals:     "/api/referrals",
-  referralCode:  "/api/referrals/code",
+  // Products / listings
+  listings:  "/api/listings",
+  listing:   (id: string) => `/api/listings/${id}`,
+  featured:  "/api/listings/featured",
+  categories:"/api/categories",
+  // Orders & wallet
+  orders:    "/api/orders",
+  order:     (id: string) => `/api/orders/${id}`,
+  wallet:    "/api/wallet",
+  transactions: "/api/transactions",
+  // Earn
+  earn:      "/api/earn",
+  tasks:     "/api/tasks",
+  // Referrals
+  referrals:    "/api/referrals",
+  referralCode: "/api/referrals/code",
+  // User
+  user:      "/api/user",
+  profile:   "/api/user/profile",
+  // Checkout
   checkout:      "/api/checkout",
   webhookStripe: "/api/webhooks/stripe",
 } as const;
 
 // ─── Pagination ───────────────────────────────────────────────────────────────
 export const PAGINATION = {
-  defaultPage:      1,
-  defaultLimit:     12,
-  bundlesPerPage:   12,
-  reviewsPerPage:   10,
-  ordersPerPage:    20,
+  defaultPage:    1,
+  defaultLimit:   12,
+  listingsPerPage:12,
+  ordersPerPage:  20,
+  tasksPerPage:   20,
 } as const;
 
 // ─── Animation Durations (ms) ────────────────────────────────────────────────
@@ -68,28 +83,31 @@ export const DURATION = {
 
 // ─── Local Storage Keys ───────────────────────────────────────────────────────
 export const STORAGE_KEYS = {
-  theme:       "mbh-theme",
-  cartItems:   "mbh-cart",
-  recentViews: "mbh-recent",
-  filters:     "mbh-filters",
+  theme:         "mh-theme",
+  cartItems:     "mh-cart",
+  recentViews:   "mh-recent",
+  filters:       "mh-filters",
+  announcement:  "mh-announcement-dismissed",
 } as const;
 
 // ─── Cookie Names ─────────────────────────────────────────────────────────────
 export const COOKIES = {
-  referralCode: "mbh-ref",
-  session:      "mbh-session",
+  referralCode: "mh-ref",
+  session:      "mh-session",
 } as const;
 
 // ─── Query Keys (React Query) ─────────────────────────────────────────────────
 export const QUERY_KEYS = {
-  bundles:      ["bundles"],
-  bundle:       (slug: string) => ["bundles", slug],
-  featured:     ["bundles", "featured"],
-  categories:   ["categories"],
-  orders:       ["orders"],
-  order:        (id: string) => ["orders", id],
-  user:         ["user"],
-  referrals:    ["referrals"],
+  listings:   ["listings"],
+  listing:    (id: string) => ["listings", id],
+  featured:   ["listings", "featured"],
+  categories: ["categories"],
+  orders:     ["orders"],
+  order:      (id: string) => ["orders", id],
+  wallet:     ["wallet"],
+  user:       ["user"],
+  referrals:  ["referrals"],
+  tasks:      ["tasks"],
 } as const;
 
 // ─── Validation Limits ────────────────────────────────────────────────────────
@@ -99,30 +117,41 @@ export const LIMITS = {
   nameMaxLength:    50,
   descMaxLength:    500,
   searchMaxLength:  100,
-  maxCartItems:     5,
 } as const;
 
 // ─── Currency ─────────────────────────────────────────────────────────────────
 export const CURRENCY = {
-  default:  "USD",
-  locale:   "en-US",
-  symbol:   "$",
+  default: "USD",
+  locale:  "en-US",
+  symbol:  "$",
 } as const;
 
 // ─── Social Links ─────────────────────────────────────────────────────────────
 export const SOCIAL = {
-  twitter:   "https://twitter.com/mysterybundlehub",
-  instagram: "https://instagram.com/mysterybundlehub",
-  discord:   "https://discord.gg/mysterybundlehub",
-  github:    "https://github.com/mysterybundlehub",
+  twitter:   "https://twitter.com/mysteryhub",
+  instagram: "https://instagram.com/mysteryhub",
+  discord:   "https://discord.gg/mysteryhub",
+  telegram:  "https://t.me/mysteryhub",
 } as const;
 
 // ─── Brand ────────────────────────────────────────────────────────────────────
 export const BRAND = {
-  name:         "Mystery Bundle Hub",
-  shortName:    "MBH",
-  tagline:      "Unlock the Unexpected",
+  name:         "Mystery Hub",
+  shortName:    "MH",
+  tagline:      "Everything Digital. One Trusted Place.",
   primaryColor: "#18C964",
-  email:        "hello@mysterybundlehub.com",
-  supportEmail: "support@mysterybundlehub.com",
+  email:        "hello@mysteryhub.com",
+  supportEmail: "support@mysteryhub.com",
+} as const;
+
+// ─── Z-Index Scale ────────────────────────────────────────────────────────────
+export const Z = {
+  base:       0,
+  raised:     10,
+  dropdown:   20,
+  sticky:     30,
+  overlay:    40,
+  modal:      50,
+  toast:      60,
+  tooltip:    70,
 } as const;

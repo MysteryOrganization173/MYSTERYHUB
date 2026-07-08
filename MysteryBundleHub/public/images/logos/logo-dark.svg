@@ -1,0 +1,30 @@
+<!--
+  Mystery Hub Full Logo  Dark variant PLACEHOLDER
+  For use on white/light backgrounds. Replace with final production asset.
+-->
+<svg
+  width="180"
+  height="44"
+  viewBox="0 0 180 44"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  aria-label="Mystery Hub"
+>
+  <rect width="40" height="40" x="0" y="2" rx="10" fill="#18C964"/>
+  <path
+    d="M8.5 30.5V13.5L20 22.5L31.5 13.5V30.5"
+    stroke="white"
+    stroke-width="3"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <text
+    x="50"
+    y="28"
+    font-family="system-ui, -apple-system, sans-serif"
+    font-size="18"
+    font-weight="700"
+    letter-spacing="-0.5"
+    fill="#0a0a0a"
+  >Mystery <tspan fill="#096b33">Hub</tspan></text>
+</svg>
