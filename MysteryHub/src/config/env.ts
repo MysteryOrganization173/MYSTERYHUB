@@ -44,3 +44,21 @@ export const serverEnv = {
 
 export type Env = typeof env;
 export type ServerEnv = typeof serverEnv;
+
+/**
+ * True once the minimum client-side Supabase credentials are present.
+ * Used by src/lib/supabase/client.ts consumers to avoid confusing runtime
+ * errors when `.env.local` hasn't been configured yet.
+ */
+export const isSupabaseConfigured = Boolean(
+  env.supabaseUrl && env.supabaseAnonKey
+);
+
+/**
+ * True once the service-role key is present. Server-only code
+ * (src/lib/supabase/admin.ts, src/services/orders.ts,
+ * src/services/profiles.ts) can check this before querying.
+ */
+export const isSupabaseAdminConfigured = Boolean(
+  env.supabaseUrl && serverEnv.supabaseServiceRoleKey
+);

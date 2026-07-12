@@ -14,10 +14,12 @@ import {
   X,
   Sparkles,
   LogIn,
+  LogOut,
   UserPlus,
 } from "lucide-react";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/AuthProvider";
 import {
   Sheet,
   SheetContent,
@@ -26,6 +28,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 // Map icon string names from siteConfig to Lucide components
 const iconMap = {
@@ -83,12 +86,22 @@ function NavLink({
   );
 }
 
+function getInitial(label: string): string {
+  return label.trim().charAt(0).toUpperCase() || "?";
+}
+
 export function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { user, isLoading, signOut } = useAuth();
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  async function handleSignOut() {
+    await signOut();
+    setOpen(false);
+  }
 
   return (
     <header className="sticky top-0 z-40 w-full glass-nav">
@@ -127,24 +140,50 @@ export function Navbar() {
 
         {/* ── Right CTAs ──────────────────────────────────── */}
         <div className="flex items-center gap-2">
-          <Link
-            href="/sign-in"
-            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground px-2 py-1.5"
-          >
-            <LogIn className="h-3.5 w-3.5" aria-hidden />
-            Sign In
-          </Link>
-          <Button
-            asChild
-            variant="brand"
-            size="sm"
-            className="hidden sm:inline-flex gap-1.5 rounded-lg"
-          >
-            <Link href="/sign-up">
-              <UserPlus className="h-3.5 w-3.5" aria-hidden />
-              Get Started
-            </Link>
-          </Button>
+          {!isLoading && user ? (
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="flex items-center gap-2 pl-1">
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback className="bg-brand/15 text-brand text-xs font-semibold">
+                    {getInitial(user.fullName ?? user.email)}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="max-w-[9rem] truncate text-sm font-medium text-foreground">
+                  {user.fullName ?? user.email}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1.5"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-3.5 w-3.5" aria-hidden />
+                Sign Out
+              </Button>
+            </div>
+          ) : (
+            <>
+              <Link
+                href="/sign-in"
+                className="hidden sm:inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground px-2 py-1.5"
+              >
+                <LogIn className="h-3.5 w-3.5" aria-hidden />
+                Sign In
+              </Link>
+              <Button
+                asChild
+                variant="brand"
+                size="sm"
+                className="hidden sm:inline-flex gap-1.5 rounded-lg"
+              >
+                <Link href="/sign-up">
+                  <UserPlus className="h-3.5 w-3.5" aria-hidden />
+                  Get Started
+                </Link>
+              </Button>
+            </>
+          )}
 
           {/* ── Mobile hamburger ──────────────────────────── */}
           <Sheet open={open} onOpenChange={setOpen}>
@@ -236,28 +275,53 @@ export function Navbar() {
 
               {/* Sheet footer CTAs */}
               <div className="border-t border-border/50 p-4 space-y-2">
-                <Button
-                  asChild
-                  variant="outline"
-                  className="w-full gap-2 rounded-lg"
-                  onClick={() => setOpen(false)}
-                >
-                  <Link href="/sign-in">
-                    <LogIn className="h-4 w-4" aria-hidden />
-                    Sign In
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="brand"
-                  className="w-full gap-2 rounded-lg"
-                  onClick={() => setOpen(false)}
-                >
-                  <Link href="/sign-up">
-                    <UserPlus className="h-4 w-4" aria-hidden />
-                    Get Started Free
-                  </Link>
-                </Button>
+                {!isLoading && user ? (
+                  <>
+                    <div className="flex items-center gap-2.5 rounded-lg border border-border/50 bg-secondary/40 px-3 py-2.5">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="bg-brand/15 text-brand text-xs font-semibold">
+                          {getInitial(user.fullName ?? user.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="truncate text-sm font-medium text-foreground">
+                        {user.fullName ?? user.email}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      className="w-full gap-2 rounded-lg"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="w-full gap-2 rounded-lg"
+                      onClick={() => setOpen(false)}
+                    >
+                      <Link href="/sign-in">
+                        <LogIn className="h-4 w-4" aria-hidden />
+                        Sign In
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="brand"
+                      className="w-full gap-2 rounded-lg"
+                      onClick={() => setOpen(false)}
+                    >
+                      <Link href="/sign-up">
+                        <UserPlus className="h-4 w-4" aria-hidden />
+                        Get Started Free
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
             </SheetContent>
           </Sheet>

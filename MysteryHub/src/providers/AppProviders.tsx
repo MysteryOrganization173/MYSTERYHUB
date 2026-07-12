@@ -8,9 +8,9 @@
  * Current providers (in order, outermost → innermost):
  *   1. ThemeProvider  — next-themes dark/light toggle
  *   2. TooltipProvider — Radix global tooltip config
+ *   3. AuthProvider   — Supabase Auth session (added in Phase 1B)
  *
  * Future providers to add here:
- *   - AuthProvider (Supabase session)
  *   - CartProvider (shopping cart state)
  *   - ModalProvider (portal registry)
  *   - QueryClientProvider (React Query)
@@ -19,6 +19,7 @@
 import * as React from "react";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthProvider } from "@/providers/AuthProvider";
 import { Toaster } from "sonner";
 
 interface AppProvidersProps {
@@ -34,7 +35,7 @@ export function AppProviders({ children }: AppProvidersProps) {
       disableTransitionOnChange
     >
       <TooltipProvider delayDuration={300}>
-        {children}
+        <AuthProvider>{children}</AuthProvider>
         <Toaster
           position="bottom-right"
           theme="dark"
