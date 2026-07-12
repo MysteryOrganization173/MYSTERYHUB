@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { PackageSearch } from "lucide-react";
+import { Suspense } from "react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ComingSoon } from "@/components/shared/ComingSoon";
+import { OrderLookupView } from "@/components/track";
 
 export const metadata: Metadata = {
   title: "Track Order",
@@ -11,17 +11,20 @@ export const metadata: Metadata = {
 
 export default function TrackPage() {
   return (
-    <PageContainer>
-      <PageHeader
-        badge="Orders"
-        title="Track Your Order"
-        description="Enter your order ID or sign in to see real-time delivery and fulfillment status for all your purchases."
-      />
-      <ComingSoon
-        icon={<PackageSearch className="h-8 w-8 text-brand" aria-hidden />}
-        title="Order tracking is on the way"
-        description="Real-time order status, delivery updates, and history are coming soon."
-      />
+    <PageContainer narrow className="py-8 md:py-10">
+      <div className="mb-8">
+        <PageHeader
+          badge="Orders"
+          title="Track Your Order"
+          description="Enter your order reference to see real-time payment and delivery status."
+        />
+      </div>
+
+      {/* useSearchParams (inside OrderLookupView) requires a Suspense
+       * boundary in the App Router. */}
+      <Suspense fallback={null}>
+        <OrderLookupView />
+      </Suspense>
     </PageContainer>
   );
 }

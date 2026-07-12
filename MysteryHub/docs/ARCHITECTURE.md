@@ -39,7 +39,7 @@
 | Date Utilities | date-fns | 4 |
 | Database | Supabase (PostgreSQL) | — |
 | Auth | Supabase Auth | — |
-| Payments | Stripe | — |
+| Payments | Paystack (payment initialization, V1 Phase 3) | REST API v1 |
 | Email | Resend | — |
 
 ---
@@ -62,6 +62,7 @@ MysteryBundleHub/
 │   │   ├── layout/             # Navbar, Footer, Sidebar
 │   │   ├── home/               # Homepage sections (Hero, Services, Trust…)
 │   │   ├── buy/                # Internet package / mobile services purchase flow
+│   │   ├── track/              # Order tracking — lookup form, details card, status timeline
 │   │   ├── brand/              # Logo and brand components
 │   │   ├── dashboard/          # Dashboard-specific components
 │   │   ├── forms/              # Form components (SignIn, SignUp, Address…)
@@ -82,7 +83,13 @@ MysteryBundleHub/
 │   │
 │   ├── services/               # API service layer (no business logic)
 │   │   ├── api.ts              # Base apiClient (get/post/put/patch/delete)
-│   │   ├── dataBundles.ts      # Internet packages / mobile connectivity service
+│   │   ├── catalogue/          # Catalogue layer — networks/bundles (mock-backed, SuccessBizHub-ready)
+│   │   ├── payments/           # Paystack client, paymentService, webhook verifier (server-only)
+│   │   ├── checkout.ts         # checkoutService — order + payment orchestration (server-only)
+│   │   ├── dataBundles.ts      # Order placement/status (placeOrder, getOrderStatus) — SuccessBizHub, not yet called
+│   │   ├── orders.ts           # Order persistence (Supabase)
+│   │   ├── auth.ts             # authService (Supabase Auth)
+│   │   ├── profiles.ts         # profilesService (Supabase)
 │   │   └── bundles.ts          # Legacy catalog service (scaffold)
 │   │
 │   ├── config/
@@ -208,15 +215,39 @@ Cross-cutting concerns: `ThemeProvider`, future `ErrorBoundary`, `AnalyticsProvi
 - Normalizes errors into `ApiResponse<T>`
 - Never throws — always returns `{ data, error }`
 
-`src/services/dataBundles.ts` — `dataBundlesService` (active commerce path):
-- `getNetworks()` — mobile network options
-- `getBundles(networkId)` — internet packages for a network
+`src/services/catalogue/` — `catalogueService` (catalog reads, mock-backed):
+- `getNetworks()` / `getBundles(networkId)` — cached, mapped, never throws
+- Pluggable `CatalogueSource` (currently `mockCatalogueSource`; SuccessBizHub
+  becomes a second implementation, swapped in one line) — see `docs/catalogue.md`
+
+`src/services/dataBundles.ts` — `dataBundlesService` (order placement only):
 - `placeOrder()` / `getOrderStatus()` — purchase + tracking (mock until SuccessBizHub is live)
 
 `src/services/bundles.ts` — `bundlesService` (legacy catalog scaffold):
 - Paginated listing helpers; not the primary product surface
 
-Add new service files as features grow: `ordersService`, `reviewsService`, `referralsService`, etc.
+`src/services/orders.ts`, `src/services/auth.ts`, `src/services/profiles.ts` —
+`ordersService`, `authService`, `profilesService` (V1 backend foundation +
+auth; see `docs/v1-implementation-plan.md`).
+
+`src/services/checkout.ts` + `src/services/payments/` — payment
+initialization (Paystack), V1 Phase 3. `checkoutService` orchestrates
+`ordersService.createOrder` + `paymentService.initializePayment`;
+`src/services/payments/paystackClient.ts` is the only file that calls
+Paystack's API directly. Server-only end to end — see `docs/payment-flow.md`.
+
+`src/services/fulfillment/` — `fulfillmentService`, V1 Phase after
+payment. Prepared but not wired into any route — `SupplierAdapter`
+interface + mock implementation, retry strategy, in-memory queue. See
+`docs/fulfillment.md`.
+
+`GET /api/orders/[reference]` + `src/components/track/` — order tracking,
+V1 Phase 4. Reads `ordersService.getOrderByReference` only (no new
+service file); `OrderLookupView` composes `OrderLookupForm`,
+`OrderDetailsCard`, `OrderStatusTimeline`, and `StatusBadge`. See
+`docs/order-tracking.md`.
+
+Add new service files as features grow: `reviewsService`, `referralsService`, etc.
 
 ---
 
@@ -295,14 +326,16 @@ All aliases resolve from `src/`:
 | `NEXT_PUBLIC_APP_NAME` | Client | App display name |
 | `NEXT_PUBLIC_SUPABASE_URL` | Client | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Client | Supabase anonymous key |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Client | Stripe public key |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Client | Stripe public key (scaffolded, unused) |
+| `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | Client | Paystack public key (not required by the current server-initialized popup flow; kept for future client-side use) |
 | `NEXT_PUBLIC_GA_ID` | Client | Google Analytics ID |
 | `NEXT_PUBLIC_ENABLE_REFERRALS` | Client | Feature flag |
 | `NEXT_PUBLIC_ENABLE_AFFILIATES` | Client | Feature flag |
 | `NEXT_PUBLIC_MAINTENANCE_MODE` | Client | Maintenance mode flag |
 | `SUPABASE_SERVICE_ROLE_KEY` | **Server only** | Supabase admin key |
-| `STRIPE_SECRET_KEY` | **Server only** | Stripe secret key |
-| `STRIPE_WEBHOOK_SECRET` | **Server only** | Stripe webhook secret |
+| `STRIPE_SECRET_KEY` | **Server only** | Stripe secret key (scaffolded, unused) |
+| `STRIPE_WEBHOOK_SECRET` | **Server only** | Stripe webhook secret (scaffolded, unused) |
+| `PAYSTACK_SECRET_KEY` | **Server only** | Paystack secret key — used for both API calls and webhook signature verification |
 | `RESEND_API_KEY` | **Server only** | Resend email key |
 | `RESEND_FROM_EMAIL` | **Server only** | Sender email address |
 

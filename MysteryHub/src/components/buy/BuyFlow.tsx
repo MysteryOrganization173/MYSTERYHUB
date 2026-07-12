@@ -1,23 +1,26 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
   Package,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatGHS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { NETWORK_OPTIONS, getBundlesByNetwork } from "@/data/bundles";
-import { dataBundlesService } from "@/services/dataBundles";
+import { apiClient } from "@/services/api";
+import { catalogueService } from "@/services/catalogue";
+import { resumePaystackTransaction } from "@/lib/paystack/paystackPopup";
 import type {
   DataBundle,
   NetworkId,
   NetworkOption,
   PurchaseStep,
 } from "@/types/bundle";
+import type { CheckoutRequestBody, CheckoutResult } from "@/types/payment";
 import { PurchaseSteps } from "./PurchaseSteps";
 import { NetworkSelector } from "./NetworkSelector";
 import { BundleGrid } from "./BundleGrid";
@@ -103,14 +106,14 @@ function SuccessScreen({
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs text-muted-foreground font-medium">Total Paid</span>
-          <span className="text-sm font-bold text-foreground">${bundle.price.toFixed(2)}</span>
+          <span className="text-sm font-bold text-foreground">{formatGHS(bundle.price)}</span>
         </div>
       </div>
 
       {/* Info note */}
       <p className="text-[11px] text-muted-foreground max-w-[260px] leading-relaxed">
-        Payment processing is coming soon. This order has been logged and will
-        be fulfilled once payments go live.
+        Your payment was submitted to Paystack and is pending confirmation.
+        This order will be queued for fulfillment once payment clears.
       </p>
 
       {/* Actions */}
@@ -120,7 +123,7 @@ function SuccessScreen({
           className="flex-1 gap-2 rounded-xl"
           asChild
         >
-          <a href="/track">
+          <a href={`/track?ref=${encodeURIComponent(reference)}`}>
             <Package className="h-4 w-4" />
             Track Order
           </a>
@@ -138,6 +141,30 @@ function SuccessScreen({
   );
 }
 
+// ─── Catalogue loading / error states ─────────────────────────────────────────
+// Minimal, unobtrusive states for the async catalogueService calls — no new
+// visual language, just the existing muted-text/spinner conventions.
+
+function CatalogueLoading({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden />
+      <p className="text-xs text-muted-foreground">{label}</p>
+    </div>
+  );
+}
+
+function CatalogueError({ message }: { message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+      <p className="text-sm font-medium text-foreground">
+        Couldn&apos;t load the catalogue
+      </p>
+      <p className="text-xs text-muted-foreground max-w-xs">{message}</p>
+    </div>
+  );
+}
+
 // ─── Main BuyFlow component ────────────────────────────────────────────────────
 
 export function BuyFlow() {
@@ -148,11 +175,50 @@ export function BuyFlow() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderReference, setOrderReference] = useState<string | null>(null);
 
+  // ── Catalogue data (networks + bundles), loaded via catalogueService ──────
+  const [networks, setNetworks] = useState<NetworkOption[]>([]);
+  const [networksLoading, setNetworksLoading] = useState(true);
+  const [networksError, setNetworksError] = useState<string | null>(null);
+
+  const [networkBundles, setNetworkBundles] = useState<DataBundle[]>([]);
+  const [bundlesLoading, setBundlesLoading] = useState(false);
+  const [bundlesError, setBundlesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setNetworksLoading(true);
+    catalogueService.getNetworks().then(({ data, error }) => {
+      if (cancelled) return;
+      setNetworks(data ?? []);
+      setNetworksError(error);
+      setNetworksLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedNetworkId) {
+      setNetworkBundles([]);
+      return;
+    }
+    let cancelled = false;
+    setBundlesLoading(true);
+    setBundlesError(null);
+    catalogueService.getBundles(selectedNetworkId).then(({ data, error }) => {
+      if (cancelled) return;
+      setNetworkBundles(data ?? []);
+      setBundlesError(error);
+      setBundlesLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedNetworkId]);
+
   // Derived values
-  const selectedNetwork = NETWORK_OPTIONS.find((n) => n.id === selectedNetworkId) ?? null;
-  const networkBundles = selectedNetworkId
-    ? getBundlesByNetwork(selectedNetworkId)
-    : [];
+  const selectedNetwork = networks.find((n) => n.id === selectedNetworkId) ?? null;
 
   // ── Navigation ──────────────────────────────────────────────────────────────
 
@@ -185,25 +251,50 @@ export function BuyFlow() {
     setSelectedBundle(null);
   }
 
-  // ── Order submission ─────────────────────────────────────────────────────────
+  // ── Order + payment submission ─────────────────────────────────────────────
+  // Flow: order created -> payment initialized -> Paystack popup/redirect ->
+  // pending payment status -> reference returned. See docs/payment-flow.md.
+
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   async function handleConfirmOrder() {
     if (!selectedBundle || !selectedNetworkId || !phoneNumber) return;
 
+    setCheckoutError(null);
     setIsProcessing(true);
-    try {
-      const result = await dataBundlesService.placeOrder({
-        bundle_id: selectedBundle.id,
-        recipient_phone: phoneNumber.replace(/\D/g, ""),
-        reference: `MH-${Date.now()}`,
-      });
-      setOrderReference(result.reference);
-    } catch {
-      // In production: show a toast error here
-      console.error("Order failed");
-    } finally {
+
+    const checkoutBody: CheckoutRequestBody = {
+      network: selectedNetworkId,
+      bundleId: selectedBundle.id,
+      bundleName: selectedBundle.name,
+      recipientPhone: phoneNumber.replace(/\D/g, ""),
+      amount: selectedBundle.price,
+    };
+
+    const { data, error } = await apiClient.post<CheckoutResult>(
+      "/checkout",
+      checkoutBody
+    );
+
+    if (error || !data) {
+      setCheckoutError(error ?? "Couldn't start checkout. Please try again.");
       setIsProcessing(false);
+      return;
     }
+
+    // Order now exists with payment_status = "pending". Open the Paystack
+    // popup (falls back to a redirect if the popup can't load).
+    await resumePaystackTransaction({
+      accessCode: data.accessCode,
+      authorizationUrl: data.authorizationUrl,
+      onSuccess: () => {
+        setOrderReference(data.reference);
+        setIsProcessing(false);
+      },
+      onCancel: () => {
+        setIsProcessing(false);
+      },
+    });
   }
 
   // ── Reset flow ────────────────────────────────────────────────────────────────
@@ -214,6 +305,7 @@ export function BuyFlow() {
     setSelectedBundle(null);
     setPhoneNumber("");
     setOrderReference(null);
+    setCheckoutError(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -257,21 +349,37 @@ export function BuyFlow() {
         <div className="p-5">
           {/* Step 1 — Network */}
           {step === 1 && (
-            <NetworkSelector
-              networks={NETWORK_OPTIONS}
-              selected={selectedNetworkId}
-              onSelect={handleNetworkSelect}
-            />
+            <>
+              {networksLoading && <CatalogueLoading label="Loading networks…" />}
+              {!networksLoading && networksError && (
+                <CatalogueError message={networksError} />
+              )}
+              {!networksLoading && !networksError && (
+                <NetworkSelector
+                  networks={networks}
+                  selected={selectedNetworkId}
+                  onSelect={handleNetworkSelect}
+                />
+              )}
+            </>
           )}
 
           {/* Step 2 — Bundle */}
           {step === 2 && selectedNetwork && (
-            <BundleGrid
-              bundles={networkBundles}
-              network={selectedNetwork}
-              selectedBundleId={selectedBundle?.id ?? null}
-              onSelect={setSelectedBundle}
-            />
+            <>
+              {bundlesLoading && <CatalogueLoading label="Loading packages…" />}
+              {!bundlesLoading && bundlesError && (
+                <CatalogueError message={bundlesError} />
+              )}
+              {!bundlesLoading && !bundlesError && (
+                <BundleGrid
+                  bundles={networkBundles}
+                  network={selectedNetwork}
+                  selectedBundleId={selectedBundle?.id ?? null}
+                  onSelect={setSelectedBundle}
+                />
+              )}
+            </>
           )}
 
           {/* Step 3 — Phone */}
@@ -285,14 +393,21 @@ export function BuyFlow() {
 
           {/* Step 4 — Review */}
           {step === 4 && selectedBundle && selectedNetwork && (
-            <OrderSummary
-              bundle={selectedBundle}
-              network={selectedNetwork}
-              phoneNumber={phoneNumber}
-              onConfirm={handleConfirmOrder}
-              onEdit={goToStep}
-              isProcessing={isProcessing}
-            />
+            <>
+              <OrderSummary
+                bundle={selectedBundle}
+                network={selectedNetwork}
+                phoneNumber={phoneNumber}
+                onConfirm={handleConfirmOrder}
+                onEdit={goToStep}
+                isProcessing={isProcessing}
+              />
+              {checkoutError && (
+                <p className="mt-3 text-center text-xs font-medium text-destructive">
+                  {checkoutError}
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>

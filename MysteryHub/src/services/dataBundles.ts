@@ -1,10 +1,13 @@
 /**
- * Internet Packages Service — Mystery Hub
+ * Internet Packages Order Service — Mystery Hub
  *
- * This is the ONLY file that needs to change when the SuccessBizHub API goes live.
+ * Owns order placement/status only. Catalog reads (networks/bundles) moved
+ * to `src/services/catalogue/catalogueService.ts` — see docs/catalogue.md.
+ * This is still the file to change when the SuccessBizHub order endpoints
+ * go live.
  *
- * Current state  → uses mock data from src/data/bundles.ts
- * Future state   → calls SuccessBizHub API via apiClient
+ * Current state  → returns mock order responses.
+ * Future state   → calls SuccessBizHub API via apiClient.
  *
  * INTEGRATION CHECKLIST (when API is ready):
  * ─────────────────────────────────────────
@@ -13,24 +16,9 @@
  *      SUCCESSBIZHUB_API_KEY=your_key_here
  *
  * 2. Replace each function body with the commented-out API call below it.
- *
- * 3. Map ApiBundleResponse → DataBundle using the `mapBundle` helper
- *    at the bottom of this file.
- *
- * 4. Delete this preamble comment and src/data/bundles.ts when confirmed working.
  */
 
-import type {
-  DataBundle,
-  NetworkOption,
-  ApiOrderRequest,
-  ApiOrderResponse,
-  ApiBundleResponse,
-} from "@/types/bundle";
-import {
-  NETWORK_OPTIONS,
-  getBundlesByNetwork,
-} from "@/data/bundles";
+import type { ApiOrderRequest, ApiOrderResponse } from "@/types/bundle";
 
 // ─── Simulated network latency (remove with real API) ────────────────────────
 const mockDelay = (ms: number) =>
@@ -40,40 +28,6 @@ const mockDelay = (ms: number) =>
 
 export const dataBundlesService = {
   /**
-   * Returns all available networks.
-   *
-   * REAL API → GET /successbizhub/networks
-   * Response:  { networks: ApiBundleResponse[] }  (grouped by network)
-   */
-  getNetworks: async (): Promise<NetworkOption[]> => {
-    await mockDelay(150);
-    return NETWORK_OPTIONS.filter((n) => n.available);
-    // ── Replace above with: ─────────────────────────────────────────────────
-    // const { data, error } = await apiClient.get<{ networks: NetworkOption[] }>(
-    //   '/successbizhub/networks'
-    // )
-    // if (error || !data) throw new Error(error ?? 'Failed to load networks')
-    // return data.networks
-  },
-
-  /**
-   * Returns available bundles for a given network.
-   *
-   * REAL API → GET /successbizhub/bundles?network={networkId}
-   * Response:  { bundles: ApiBundleResponse[] }
-   */
-  getBundles: async (networkId: string): Promise<DataBundle[]> => {
-    await mockDelay(200);
-    return getBundlesByNetwork(networkId as DataBundle["network"]);
-    // ── Replace above with: ─────────────────────────────────────────────────
-    // const { data, error } = await apiClient.get<{ bundles: ApiBundleResponse[] }>(
-    //   `/successbizhub/bundles?network=${networkId}`
-    // )
-    // if (error || !data) throw new Error(error ?? 'Failed to load bundles')
-    // return data.bundles.map(mapBundle)
-  },
-
-  /**
    * Submits a data purchase order.
    * Currently returns a mock reference — no payment processed.
    *
@@ -81,7 +35,7 @@ export const dataBundlesService = {
    * Body:      ApiOrderRequest
    * Response:  ApiOrderResponse
    */
-  placeOrder: async (order: ApiOrderRequest): Promise<ApiOrderResponse> => {
+  placeOrder: async (_order: ApiOrderRequest): Promise<ApiOrderResponse> => {
     await mockDelay(1400);
     const reference =
       "MH-" +
@@ -125,29 +79,3 @@ export const dataBundlesService = {
     // return data
   },
 };
-
-// ─── API Response Mapper (used when real API is connected) ────────────────────
-
-export function mapBundle(
-  raw: ApiBundleResponse,
-  networkId: DataBundle["network"]
-): DataBundle {
-  const volumeGB = Math.round(raw.capacity_mb / 1024);
-  return {
-    id: raw.bundle_id,
-    network: networkId,
-    tier: networkId.includes("express")
-      ? "express"
-      : networkId.includes("budget")
-        ? "budget"
-        : "standard",
-    name: `${networkId.toUpperCase()} ${volumeGB}GB`,
-    volume: `${volumeGB}GB`,
-    volumeGB,
-    price: parseFloat(raw.price),
-    deliveryTime: `< ${raw.delivery_minutes} min`,
-    shieldProtection: raw.active,
-    available: raw.active,
-    description: raw.description ?? "",
-  };
-}

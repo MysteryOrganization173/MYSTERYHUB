@@ -16,6 +16,14 @@ export function formatCurrency(
   }).format(amount);
 }
 
+/** Formats a bundle price for display. Mystery Hub's catalogue currency is
+ * fixed to GHS (see `CATALOGUE_CURRENCY` in
+ * `src/services/catalogue/types.ts`) — a plain "₵" prefix is used instead
+ * of `Intl.NumberFormat` so output stays predictable across locales. */
+export function formatGHS(amount: number): string {
+  return `₵${amount.toFixed(2)}`;
+}
+
 export function formatDate(
   date: Date | string,
   options: Intl.DateTimeFormatOptions = {

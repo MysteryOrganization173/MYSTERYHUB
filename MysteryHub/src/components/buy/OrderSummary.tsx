@@ -10,7 +10,7 @@ import {
   Lock,
   Pencil,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatGHS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { DataBundle, NetworkOption } from "@/types/bundle";
 
@@ -115,7 +115,7 @@ export function OrderSummary({
           <div>
             <p className="text-xs text-muted-foreground">Total Due</p>
             <p className="text-2xl font-black text-foreground tabular-nums">
-              ${bundle.price.toFixed(2)}
+              {formatGHS(bundle.price)}
             </p>
           </div>
           <div className="text-right">
@@ -154,8 +154,8 @@ export function OrderSummary({
       </Button>
 
       <p className="text-center text-[11px] text-muted-foreground leading-relaxed px-4">
-        Payment processing coming soon. Your order will be queued and fulfilled
-        once payments are live.
+        You&apos;ll be asked to complete payment via Paystack. Your order will
+        be queued for fulfillment once payment is confirmed.
       </p>
     </div>
   );

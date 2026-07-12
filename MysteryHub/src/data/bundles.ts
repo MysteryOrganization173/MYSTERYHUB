@@ -1,22 +1,26 @@
 /**
  * Mock Internet Package Catalog — Mystery Hub
  *
- * This file is the SINGLE source of truth for network and internet package data
- * while the SuccessBizHub API integration is pending.
+ * Raw provider-shaped catalog data consumed ONLY by
+ * `src/services/catalogue/mockCatalogueSource.ts` — the sole
+ * `CatalogueSource` implementation today. Components must not import this
+ * file directly; go through `catalogueService` instead so the eventual
+ * SuccessBizHub source swap requires no component changes.
  *
  * TO INTEGRATE THE REAL API:
- *   Replace the NETWORK_OPTIONS and DATA_BUNDLES constants with API
- *   responses mapped inside `src/services/dataBundles.ts`.
- *   This file can then be deleted — components won't need any changes.
+ *   Add `successBizHubCatalogueSource.ts` (implementing `CatalogueSource`)
+ *   and swap it in `src/services/catalogue/catalogueService.ts`. This file
+ *   can then be deleted.
  *
- * Sample catalog pricing (illustrative):
- *   MTN Express  — 1GB $4.99 | 2GB $9.99  | 3GB $14.99 | 5GB $23.99
- *   MTN Budget   — 1GB $4.49 | 2GB $8.89  | 3GB $13.29 | 5GB $21.99
- *   AirtelTigo   — 1GB $4.79 | 2GB $8.99  | 3GB $13.49 | 5GB $22.49
- *   Telecel      — 10GB $44.99 | 15GB $63.99 | 20GB $83.99
+ * Sample catalog pricing (illustrative, GHS):
+ *   MTN Express  — 1GB ₵4.99 | 2GB ₵9.99  | 3GB ₵14.99 | 5GB ₵23.99
+ *   MTN Budget   — 1GB ₵4.49 | 2GB ₵8.89  | 3GB ₵13.29 | 5GB ₵21.99
+ *   AirtelTigo   — 1GB ₵4.79 | 2GB ₵8.99  | 3GB ₵13.49 | 5GB ₵22.49
+ *   Telecel      — 10GB ₵44.99 | 15GB ₵63.99 | 20GB ₵83.99
  */
 
-import type { DataBundle, NetworkId, NetworkOption } from "@/types/bundle";
+import type { NetworkId, NetworkOption } from "@/types/bundle";
+import type { RawCatalogueBundle } from "@/services/catalogue/types";
 
 // ─── Network Options ──────────────────────────────────────────────────────────
 
@@ -57,7 +61,7 @@ export const NETWORK_OPTIONS: NetworkOption[] = [
 
 // ─── Internet Packages (mock catalog) ─────────────────────────────────────────
 
-export const DATA_BUNDLES: DataBundle[] = [
+export const DATA_BUNDLES: RawCatalogueBundle[] = [
   // ── MTN Express ────────────────────────────────────────────────────────────
   {
     id: "mtn-express-1gb",
@@ -273,7 +277,7 @@ export const DATA_BUNDLES: DataBundle[] = [
 // ─── Helper Selectors ─────────────────────────────────────────────────────────
 // These mirror the API service interface so callers stay consistent.
 
-export function getBundlesByNetwork(networkId: NetworkId): DataBundle[] {
+export function getBundlesByNetwork(networkId: NetworkId): RawCatalogueBundle[] {
   return DATA_BUNDLES.filter(
     (b) => b.network === networkId && b.available
   );
@@ -283,6 +287,6 @@ export function getNetworkById(networkId: string): NetworkOption | undefined {
   return NETWORK_OPTIONS.find((n) => n.id === networkId);
 }
 
-export function getBundleById(bundleId: string): DataBundle | undefined {
+export function getBundleById(bundleId: string): RawCatalogueBundle | undefined {
   return DATA_BUNDLES.find((b) => b.id === bundleId);
 }

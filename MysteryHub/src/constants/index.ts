@@ -59,9 +59,10 @@ export const API = {
   // User
   user:      "/api/user",
   profile:   "/api/user/profile",
-  // Checkout
-  checkout:      "/api/checkout",
-  webhookStripe: "/api/webhooks/stripe",
+  // Checkout & payments
+  checkout:        "/api/checkout",
+  webhookStripe:   "/api/webhooks/stripe",
+  webhookPaystack: "/api/payments/webhook",
 } as const;
 
 // ─── Pagination ───────────────────────────────────────────────────────────────

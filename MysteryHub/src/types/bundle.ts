@@ -8,8 +8,11 @@
  * Architecture note:
  *   - Components consume `DataBundle` and `NetworkOption` only.
  *   - `ApiBundleResponse` / `ApiOrderRequest` / `ApiOrderResponse` define the
- *     SuccessBizHub wire shapes. The service layer (src/services/dataBundles.ts)
- *     maps between them. Components never touch API shapes directly.
+ *     SuccessBizHub wire shapes for order placement/status
+ *     (src/services/dataBundles.ts). Catalog reads (networks/bundles) are
+ *     owned by the catalogue layer instead — see
+ *     `src/services/catalogue/catalogueService.ts` and `docs/catalogue.md`.
+ *   - Components never touch API/raw provider shapes directly.
  */
 
 // ─── Network Providers ────────────────────────────────────────────────────────
@@ -36,8 +39,12 @@ export interface DataBundle {
   volume: string;
   /** Numeric volume in GB — used for sorting and comparisons */
   volumeGB: number;
-  /** Price in USD */
+  /** Numeric price, denominated in `currency` */
   price: number;
+  /** Always "GHS" today — attached by the catalogue layer's bundle mapper,
+   * never trusted from raw provider data. See `CATALOGUE_CURRENCY` in
+   * `src/services/catalogue/types.ts`. */
+  currency: "GHS";
   /** e.g. "< 2 min" — displayed on the bundle card */
   deliveryTime: string;
   /** Whether Mystery Hub's delivery guarantee is active for this bundle */
@@ -84,12 +91,16 @@ export interface PurchaseOrder {
 
 // ─── SuccessBizHub API Contract ───────────────────────────────────────────────
 //
-// These are the shapes returned by / sent to the SuccessBizHub API.
-// When the API is ready:
-//   1. Update `dataBundlesService.getNetworks` to call the real endpoint.
-//   2. Update `dataBundlesService.getBundles` to call the real endpoint.
-//   3. Map `ApiBundleResponse` → `DataBundle` inside the service.
-//   4. Components (NetworkSelector, BundleCard, etc.) require zero changes.
+// These are the shapes returned by / sent to the SuccessBizHub order
+// endpoints, consumed by `dataBundlesService` (placeOrder/getOrderStatus).
+// Catalog reads have their own raw shapes in
+// `src/services/catalogue/types.ts` (`RawCatalogueBundle`/`RawCatalogueNetwork`)
+// instead of `ApiBundleResponse` below — see docs/catalogue.md.
+//
+// When SuccessBizHub is ready for orders:
+//   1. Update `dataBundlesService.placeOrder` to call the real endpoint.
+//   2. Update `dataBundlesService.getOrderStatus` to call the real endpoint.
+//   3. Components (OrderSummary, BuyFlow, etc.) require zero changes.
 
 export interface ApiBundleResponse {
   /** SuccessBizHub internal bundle ID */

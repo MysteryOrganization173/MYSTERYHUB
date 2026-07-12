@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, Clock, Shield, ShieldOff } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatGHS } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { DataBundle, NetworkOption } from "@/types/bundle";
 
@@ -26,7 +26,7 @@ export function BundleCard({
       onClick={() => bundle.available && onSelect()}
       disabled={!bundle.available}
       aria-pressed={selected}
-      aria-label={`${bundle.volume} — $${bundle.price.toFixed(2)}, ${bundle.deliveryTime} delivery`}
+      aria-label={`${bundle.volume} — ${formatGHS(bundle.price)}, ${bundle.deliveryTime} delivery`}
       className={cn(
         "relative flex w-full flex-col gap-3 rounded-xl border p-4 text-left",
         "transition-all duration-200 tap-none",
@@ -87,7 +87,7 @@ export function BundleCard({
 
         <div className="shrink-0 text-right">
           <div className="text-2xl font-bold text-foreground leading-none">
-            ${bundle.price.toFixed(2)}
+            {formatGHS(bundle.price)}
           </div>
         </div>
       </div>

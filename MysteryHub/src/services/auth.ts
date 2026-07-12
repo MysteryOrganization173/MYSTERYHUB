@@ -16,6 +16,14 @@
  *
  * Consumers: `src/providers/AuthProvider.tsx`,
  * `src/components/forms/SignInForm.tsx`, `src/components/forms/SignUpForm.tsx`.
+ *
+ * Startup resilience: `supabaseBrowserClient` is `null` whenever Supabase
+ * env vars aren't configured (see `src/lib/supabase/client.ts`). Every
+ * method below checks for that up front and returns a friendly
+ * `ApiResponse` error rather than throwing, so sign-in/sign-up forms show
+ * a normal inline error instead of crashing, and read-only methods
+ * (`getCurrentUser`, `onAuthStateChange`) resolve to "no session" instead
+ * of erroring — auth is simply disabled, not broken.
  */
 import { supabaseBrowserClient } from "@/lib/supabase/client";
 import {
@@ -25,6 +33,9 @@ import {
   type SignUpCredentials,
 } from "@/types/auth";
 import type { ApiResponse } from "@/types";
+
+const AUTH_NOT_CONFIGURED_ERROR =
+  "Sign in is temporarily unavailable. Please try again later.";
 
 export const authService = {
   /** Creates a new Supabase Auth user. Depending on the project's email
@@ -36,6 +47,9 @@ export const authService = {
     email,
     password,
   }: SignUpCredentials): Promise<ApiResponse<AuthUser>> {
+    if (!supabaseBrowserClient) {
+      return { data: null, error: AUTH_NOT_CONFIGURED_ERROR };
+    }
     const { data, error } = await supabaseBrowserClient.auth.signUp({
       email,
       password,
@@ -55,6 +69,9 @@ export const authService = {
     email,
     password,
   }: SignInCredentials): Promise<ApiResponse<AuthUser>> {
+    if (!supabaseBrowserClient) {
+      return { data: null, error: AUTH_NOT_CONFIGURED_ERROR };
+    }
     const { data, error } =
       await supabaseBrowserClient.auth.signInWithPassword({
         email,
@@ -71,6 +88,10 @@ export const authService = {
   },
 
   async signOut(): Promise<ApiResponse<null>> {
+    if (!supabaseBrowserClient) {
+      // Nothing to sign out of when auth is disabled — not an error.
+      return { data: null, error: null };
+    }
     const { error } = await supabaseBrowserClient.auth.signOut();
     if (error) {
       return { data: null, error: error.message };
@@ -80,8 +101,14 @@ export const authService = {
 
   /** Reads the current session (if any) and projects it to `AuthUser`.
    * Returns `{ data: null, error: null }` when there is simply no session —
-   * that is not treated as an error. */
+   * that is not treated as an error. Also returns `{ data: null, error: null }`
+   * when auth is disabled (Supabase not configured), so callers like
+   * `AuthProvider` naturally resolve to a signed-out state instead of
+   * erroring. */
   async getCurrentUser(): Promise<ApiResponse<AuthUser | null>> {
+    if (!supabaseBrowserClient) {
+      return { data: null, error: null };
+    }
     const { data, error } = await supabaseBrowserClient.auth.getSession();
     if (error) {
       return { data: null, error: error.message };
@@ -92,8 +119,13 @@ export const authService = {
 
   /** Subscribes to Supabase auth state changes (sign in/out/token refresh).
    * Returns an unsubscribe function. Intended caller: `AuthProvider` only —
-   * everything else should read state via `useAuth()`. */
+   * everything else should read state via `useAuth()`. When auth is
+   * disabled, returns a no-op unsubscribe and never invokes `callback` —
+   * there is nothing to subscribe to. */
   onAuthStateChange(callback: (user: AuthUser | null) => void): () => void {
+    if (!supabaseBrowserClient) {
+      return () => {};
+    }
     const { data } = supabaseBrowserClient.auth.onAuthStateChange(
       (_event, session) => {
         callback(session?.user ? mapSupabaseUser(session.user) : null);
