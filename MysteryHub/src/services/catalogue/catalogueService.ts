@@ -21,17 +21,21 @@ import type { DataBundle, NetworkId, NetworkOption } from "@/types/bundle";
 import { CatalogueCache } from "./cache";
 import { mapNetwork } from "./networkMapper";
 import { mapBundle } from "./bundleMapper";
-import { mockCatalogueSource } from "./mockCatalogueSource";
+import { apiCatalogueSource } from "./apiCatalogueSource";
 import {
   getAdminBundleOverrides,
   getAdminNetworkOverrides,
   type CatalogueSource,
 } from "./types";
 
-// ─── Single swap point for SuccessBizHub ──────────────────────────────────
-// When the real API is ready: create `successBizHubCatalogueSource.ts`
-// implementing `CatalogueSource`, then change only the line below.
-const source: CatalogueSource = mockCatalogueSource;
+// ─── Supplier selection now lives server-side ─────────────────────────────
+// `catalogueService` is imported directly by client components (e.g.
+// `BuyFlow.tsx`), so it can never hold a supplier API key. It always talks
+// to `apiCatalogueSource` (this app's own `/api/catalogue/*` routes); the
+// real SuccessBizHub-vs-mock decision happens server-side in
+// `src/services/suppliers/supplierRegistry.ts`, driven by the
+// admin-editable `supplier_settings` table. See docs/product-audit.md.
+const source: CatalogueSource = apiCatalogueSource;
 
 // ─── Cache ─────────────────────────────────────────────────────────────────
 const networksCache = new CatalogueCache<NetworkOption[]>();

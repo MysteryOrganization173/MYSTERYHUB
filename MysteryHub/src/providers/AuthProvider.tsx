@@ -6,7 +6,11 @@
  * Reads/subscribes via `authService` only — never calls the Supabase SDK
  * directly, per the architecture rule that components (and providers)
  * consume the service layer, not the SDK. Exposes the current user, a
- * loading flag, and a `signOut()` action through `useAuth()`.
+ * loading flag, a `signOut()` action, and (V1.5 addition) the user's
+ * `profile` — including `walletBalance`/`referralCode` — through
+ * `useAuth()`, fetched via `GET /api/profile` (see
+ * `src/lib/supabase/serverAuth.ts` for why this is a normal authenticated
+ * API call rather than a server-rendered value).
  *
  * Added to the composition root in `src/providers/AppProviders.tsx`,
  * innermost relative to `ThemeProvider`/`TooltipProvider` (order does not
@@ -15,7 +19,9 @@
  */
 import * as React from "react";
 import { authService } from "@/services/auth";
+import { apiClient } from "@/services/api";
 import type { AuthUser } from "@/types/auth";
+import type { Profile } from "@/types/profile";
 
 interface AuthContextValue {
   /** Null when signed out. Undefined-vs-null is collapsed to null on
@@ -25,6 +31,15 @@ interface AuthContextValue {
    * flash of "signed out" UI before Supabase reports the real state. */
   isLoading: boolean;
   signOut: () => Promise<void>;
+  /** Null while signed out or before the first successful fetch. Includes
+   * `walletBalance`/`referralCode` — the dashboard/wallet/referrals pages
+   * read this instead of re-fetching `/api/profile` themselves whenever a
+   * "good enough" cached value is fine; anything money-sensitive (wallet
+   * balance shown for a debit/withdraw action) should still call
+   * `refreshProfile()` first. */
+  profile: Profile | null;
+  isProfileLoading: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = React.createContext<AuthContextValue | undefined>(
@@ -34,6 +49,15 @@ const AuthContext = React.createContext<AuthContextValue | undefined>(
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [profile, setProfile] = React.useState<Profile | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = React.useState(false);
+
+  const refreshProfile = React.useCallback(async () => {
+    setIsProfileLoading(true);
+    const { data } = await apiClient.get<Profile>("/profile");
+    setProfile(data ?? null);
+    setIsProfileLoading(false);
+  }, []);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -56,14 +80,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (user) {
+      refreshProfile();
+    } else {
+      setProfile(null);
+    }
+  }, [user, refreshProfile]);
+
   const signOut = React.useCallback(async () => {
     await authService.signOut();
     setUser(null);
+    setProfile(null);
   }, []);
 
   const value = React.useMemo<AuthContextValue>(
-    () => ({ user, isLoading, signOut }),
-    [user, isLoading, signOut]
+    () => ({ user, isLoading, signOut, profile, isProfileLoading, refreshProfile }),
+    [user, isLoading, signOut, profile, isProfileLoading, refreshProfile]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

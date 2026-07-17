@@ -19,6 +19,12 @@ import type { OrderPaymentStatus } from "./order";
 
 export type PaymentProvider = "paystack";
 
+/** How a checkout is paid. `"wallet"` is a V1.5 addition — see
+ * docs/product-audit.md ("full-balance wallet payments"). Wallet checkout
+ * requires a signed-in user with sufficient `wallet_balance`; there is no
+ * partial wallet+card split. */
+export type CheckoutPaymentMethod = "paystack" | "wallet";
+
 // ─── Checkout orchestration (order creation + payment init) ──────────────
 
 /** Body the client sends to POST /api/checkout. */
@@ -33,6 +39,8 @@ export interface CheckoutRequestBody {
    * checkout route synthesizes a placeholder when omitted. See
    * `synthesizeGuestEmail` and docs/payment-flow.md → "Known limitation". */
   email?: string;
+  /** Defaults to "paystack" when omitted. */
+  paymentMethod?: CheckoutPaymentMethod;
 }
 
 /** Input to `checkoutService.startCheckout` — same as `CheckoutRequestBody`
@@ -45,15 +53,24 @@ export interface StartCheckoutInput {
   amount: number;
   email: string;
   userId?: string | null;
+  paymentMethod?: CheckoutPaymentMethod;
 }
 
-/** Result returned by POST /api/checkout — everything the client needs to
- * open the Paystack popup (or redirect) and later show the pending state. */
+/** Result returned by POST /api/checkout. For `method: "paystack"`,
+ * `authorizationUrl`/`accessCode` open the popup/redirect and the order
+ * stays `payment_status = "pending"` until the webhook confirms it. For
+ * `method: "wallet"`, the order is already `payment_status = "paid"` and
+ * fulfillment has already been triggered by the time this resolves — no
+ * further client action needed. */
 export interface CheckoutResult {
   orderId: string;
   reference: string;
-  authorizationUrl: string;
-  accessCode: string;
+  method: CheckoutPaymentMethod;
+  authorizationUrl?: string;
+  accessCode?: string;
+  /** Only present for `method: "wallet"` — the wallet balance immediately
+   * after this order's debit, so the UI can update without a refetch. */
+  walletBalanceAfter?: number;
 }
 
 // ─── Payment initialization (Paystack-specific orchestration) ────────────

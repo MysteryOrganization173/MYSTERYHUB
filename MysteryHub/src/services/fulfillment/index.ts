@@ -1,5 +1,6 @@
 /**
- * Fulfillment layer barrel — prepared, unwired. See docs/fulfillment.md.
+ * Fulfillment layer barrel — wired (V1.5). See docs/fulfillment.md and
+ * docs/product-audit.md.
  */
 export { fulfillmentService } from "./fulfillmentService";
 export { mockSupplierAdapter } from "./mockSupplierAdapter";

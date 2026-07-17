@@ -28,6 +28,16 @@ export const ROUTES = {
   dashboardProfile:   "/dashboard/profile",
   dashboardReferrals: "/dashboard/referrals",
   dashboardWallet:    "/dashboard/wallet",
+  dashboardSettings:  "/dashboard/settings",
+  // Admin
+  admin:              "/admin",
+  adminOrders:        "/admin/orders",
+  adminUsers:         "/admin/users",
+  adminSuppliers:     "/admin/suppliers",
+  adminWithdrawals:   "/admin/withdrawals",
+  adminReferrals:     "/admin/referrals",
+  adminCatalogue:     "/admin/catalogue",
+  adminSettings:      "/admin/settings",
   // Legal
   privacy:  "/privacy",
   terms:    "/terms",
@@ -49,6 +59,7 @@ export const API = {
   orders:    "/api/orders",
   order:     (id: string) => `/api/orders/${id}`,
   wallet:    "/api/wallet",
+  walletWithdraw: "/api/wallet/withdraw",
   transactions: "/api/transactions",
   // Earn
   earn:      "/api/earn",
@@ -58,11 +69,19 @@ export const API = {
   referralCode: "/api/referrals/code",
   // User
   user:      "/api/user",
-  profile:   "/api/user/profile",
+  profile:   "/api/profile",
   // Checkout & payments
   checkout:        "/api/checkout",
   webhookStripe:   "/api/webhooks/stripe",
   webhookPaystack: "/api/payments/webhook",
+  // Admin
+  adminCheck:       "/api/admin/check",
+  adminStats:       "/api/admin/stats",
+  adminOrders:      "/api/admin/orders",
+  adminUsers:       "/api/admin/users",
+  adminSuppliers:   "/api/admin/suppliers",
+  adminWithdrawals: "/api/admin/withdrawals",
+  adminReferrals:   "/api/admin/referrals",
 } as const;
 
 // ─── Pagination ───────────────────────────────────────────────────────────────

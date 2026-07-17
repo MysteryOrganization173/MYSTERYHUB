@@ -9,10 +9,13 @@ import {
   ArrowRight,
   Lock,
   Pencil,
+  WalletMinimal,
+  CreditCard,
 } from "lucide-react";
 import { cn, formatGHS } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { DataBundle, NetworkOption } from "@/types/bundle";
+import type { CheckoutPaymentMethod } from "@/types/payment";
 
 interface OrderSummaryProps {
   bundle: DataBundle;
@@ -22,6 +25,13 @@ interface OrderSummaryProps {
   onEdit: (step: 1 | 2 | 3) => void;
   isProcessing?: boolean;
   className?: string;
+  /** Signed-in user's wallet balance, or `null` when signed out / unknown.
+   * When it covers the bundle price, a "Pay with Wallet" option appears
+   * alongside the default Paystack path — see docs/product-audit.md
+   * ("full-balance wallet payments, no partial split"). */
+  walletBalance?: number | null;
+  paymentMethod?: CheckoutPaymentMethod;
+  onPaymentMethodChange?: (method: CheckoutPaymentMethod) => void;
 }
 
 export function OrderSummary({
@@ -32,7 +42,12 @@ export function OrderSummary({
   onEdit,
   isProcessing = false,
   className,
+  walletBalance = null,
+  paymentMethod = "paystack",
+  onPaymentMethodChange,
 }: OrderSummaryProps) {
+  const canPayWithWallet = walletBalance !== null && walletBalance >= bundle.price;
+  const isWalletSelected = canPayWithWallet && paymentMethod === "wallet";
   // Format phone for display: strip leading 0, prepend +233
   const displayPhone = `+233 ${phoneNumber.replace(/^0/, "")}`;
 
@@ -132,6 +147,42 @@ export function OrderSummary({
         </div>
       </div>
 
+      {/* ── Payment method ── */}
+      {canPayWithWallet && onPaymentMethodChange && (
+        <div className="grid grid-cols-2 gap-2.5">
+          <button
+            type="button"
+            onClick={() => onPaymentMethodChange("paystack")}
+            className={cn(
+              "flex flex-col items-center gap-1 rounded-xl border px-3 py-3 text-center transition-colors",
+              !isWalletSelected
+                ? "border-brand/40 bg-brand/8 text-foreground"
+                : "border-border text-muted-foreground hover:border-border/80"
+            )}
+          >
+            <CreditCard className="h-4 w-4" aria-hidden />
+            <span className="text-xs font-semibold">Paystack</span>
+            <span className="text-[10px] text-muted-foreground">MoMo / Card</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onPaymentMethodChange("wallet")}
+            className={cn(
+              "flex flex-col items-center gap-1 rounded-xl border px-3 py-3 text-center transition-colors",
+              isWalletSelected
+                ? "border-brand/40 bg-brand/8 text-foreground"
+                : "border-border text-muted-foreground hover:border-border/80"
+            )}
+          >
+            <WalletMinimal className="h-4 w-4" aria-hidden />
+            <span className="text-xs font-semibold">Wallet</span>
+            <span className="text-[10px] text-muted-foreground">
+              Balance {formatGHS(walletBalance ?? 0)}
+            </span>
+          </button>
+        </div>
+      )}
+
       {/* ── CTA ── */}
       <Button
         type="button"
@@ -144,6 +195,11 @@ export function OrderSummary({
       >
         {isProcessing ? (
           "Processing order…"
+        ) : isWalletSelected ? (
+          <>
+            <WalletMinimal className="h-4 w-4" aria-hidden />
+            Pay {formatGHS(bundle.price)} with Wallet
+          </>
         ) : (
           <>
             <Lock className="h-4 w-4" aria-hidden />
@@ -154,8 +210,9 @@ export function OrderSummary({
       </Button>
 
       <p className="text-center text-[11px] text-muted-foreground leading-relaxed px-4">
-        You&apos;ll be asked to complete payment via Paystack. Your order will
-        be queued for fulfillment once payment is confirmed.
+        {isWalletSelected
+          ? "Your wallet will be debited instantly and your order queued for fulfillment right away — no redirect needed."
+          : "You'll be asked to complete payment via Paystack. Your order will be queued for fulfillment once payment is confirmed."}
       </p>
     </div>
   );

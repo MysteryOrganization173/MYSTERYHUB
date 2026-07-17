@@ -1,20 +1,20 @@
 /**
- * Fulfillment Service — prepared, unwired (see docs/fulfillment.md).
+ * Fulfillment Service — wired (V1.5 Product Transformation).
  *
  * The orchestrator for the pipeline stage that comes after payment:
  *
  *   Order Service (payment_status = "paid")
  *     -> fulfillmentService.processOrder()
  *          -> idempotency check (attempts store, keyed by orderReference)
- *          -> SupplierAdapter.fulfill()
+ *          -> supplierRegistry.getActiveFulfillmentAdapter().fulfill()
  *          -> ordersService.updateFulfillmentStatus()
  *          -> retryStrategy decides whether to re-enqueue on failure
  *
- * NOT called from any route, cron, or the payment webhook today —
- * `src/app/api/payments/webhook/route.ts` still only updates
- * `payment_status`, exactly as documented in docs/payment-flow.md. This
- * file exists so the next phase (per docs/ROADMAP.md sequencing) can wire
- * a caller without redesigning the orchestration.
+ * Called from `src/app/api/payments/webhook/route.ts` right after a
+ * `charge.success` event marks the matching order `payment_status =
+ * "paid"` (see docs/fulfillment.md, docs/product-audit.md). Also called
+ * directly by the wallet-payment checkout path (no webhook round trip
+ * needed when the order is paid synchronously from the wallet).
  *
  * Server-only: transitively imports `ordersService`, which imports the
  * Supabase service-role admin client.
@@ -31,14 +31,14 @@ import {
   shouldRetry,
 } from "./retryStrategy";
 import { inMemoryFulfillmentQueue } from "./queue";
-import { mockSupplierAdapter } from "./mockSupplierAdapter";
-import type { SupplierAdapter } from "./supplierAdapter";
+import { supplierRegistry } from "@/services/suppliers/supplierRegistry";
 
-// ─── Single swap point for SuccessBizHub ──────────────────────────────────
-// Same pattern as src/services/catalogue/catalogueService.ts: when the real
-// SuccessBizHub adapter exists, implement `SupplierAdapter` in a new
-// `successBizHubSupplierAdapter.ts` and change only the line below.
-const adapter: SupplierAdapter = mockSupplierAdapter;
+// ─── Supplier selection ────────────────────────────────────────────────────
+// Resolved per-call from `supplierRegistry` (admin-editable
+// `supplier_settings`, see docs/product-audit.md) instead of a hardcoded
+// constant — this is the "supplier switching architecture" the V1.5 pass
+// added. `supplierRegistry` always falls back to the mock adapter, so this
+// call never throws even if `supplier_settings` is unreachable.
 
 // ─── Idempotency / duplicate-protection store ─────────────────────────────
 // In-memory today (lost on restart), keyed by `orderReference` — the same
@@ -46,7 +46,10 @@ const adapter: SupplierAdapter = mockSupplierAdapter;
 // yet applied) plays for a real deployment. Swap this for a
 // Supabase-backed read/write once that migration is applied; the function
 // signatures below (`getAttempt`/`recordAttempt`) are written so that swap
-// only touches this file, not `processOrder`'s call sites.
+// only touches this file, not `processOrder`'s call sites. Now that this
+// service IS called from the Paystack webhook (see docs/product-audit.md),
+// a restart mid-retry means an attempt count resets to zero — a known,
+// documented limitation, not a silent one.
 const attempts = new Map<string, FulfillmentAttemptRecord>();
 
 function getAttempt(orderReference: string): FulfillmentAttemptRecord | null {
@@ -84,6 +87,7 @@ export const fulfillmentService = {
 
     const attemptNumber = (existing?.attemptNumber ?? 0) + 1;
 
+    const adapter = await supplierRegistry.getActiveFulfillmentAdapter();
     const result = await adapter.fulfill(job);
 
     if (result.status === "rejected") {
@@ -100,7 +104,10 @@ export const fulfillmentService = {
       });
 
       if (!willRetry) {
-        await ordersService.updateFulfillmentStatus(job.orderReference, "failed");
+        await ordersService.updateFulfillmentStatus(job.orderReference, "failed", {
+          supplierReference: result.supplierReference,
+          fulfillmentError: result.error ?? "Supplier rejected the order",
+        });
       }
 
       return {
@@ -124,7 +131,10 @@ export const fulfillmentService = {
       updatedAt: nowIso(),
     });
 
-    await ordersService.updateFulfillmentStatus(job.orderReference, "delivered");
+    await ordersService.updateFulfillmentStatus(job.orderReference, "delivered", {
+      supplierReference: result.supplierReference,
+      fulfillmentError: null,
+    });
 
     return {
       orderReference: job.orderReference,

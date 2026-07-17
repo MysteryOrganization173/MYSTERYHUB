@@ -14,13 +14,18 @@ import { Button } from "@/components/ui/button";
 import { apiClient } from "@/services/api";
 import { catalogueService } from "@/services/catalogue";
 import { resumePaystackTransaction } from "@/lib/paystack/paystackPopup";
+import { useAuth } from "@/providers/AuthProvider";
 import type {
   DataBundle,
   NetworkId,
   NetworkOption,
   PurchaseStep,
 } from "@/types/bundle";
-import type { CheckoutRequestBody, CheckoutResult } from "@/types/payment";
+import type {
+  CheckoutPaymentMethod,
+  CheckoutRequestBody,
+  CheckoutResult,
+} from "@/types/payment";
 import { PurchaseSteps } from "./PurchaseSteps";
 import { NetworkSelector } from "./NetworkSelector";
 import { BundleGrid } from "./BundleGrid";
@@ -56,6 +61,7 @@ interface SuccessScreenProps {
   network: NetworkOption;
   phoneNumber: string;
   onBuyAnother: () => void;
+  paidWithWallet?: boolean;
 }
 
 function SuccessScreen({
@@ -64,6 +70,7 @@ function SuccessScreen({
   network,
   phoneNumber,
   onBuyAnother,
+  paidWithWallet = false,
 }: SuccessScreenProps) {
   const displayPhone = `+233 ${phoneNumber.replace(/^0/, "")}`;
 
@@ -112,8 +119,9 @@ function SuccessScreen({
 
       {/* Info note */}
       <p className="text-[11px] text-muted-foreground max-w-[260px] leading-relaxed">
-        Your payment was submitted to Paystack and is pending confirmation.
-        This order will be queued for fulfillment once payment clears.
+        {paidWithWallet
+          ? "Paid from your Mystery Hub wallet — your order is already queued for fulfillment."
+          : "Your payment was submitted to Paystack and is pending confirmation. This order will be queued for fulfillment once payment clears."}
       </p>
 
       {/* Actions */}
@@ -168,12 +176,33 @@ function CatalogueError({ message }: { message: string }) {
 // ─── Main BuyFlow component ────────────────────────────────────────────────────
 
 export function BuyFlow() {
+  const { user } = useAuth();
   const [step, setStep] = useState<PurchaseStep>(1);
   const [selectedNetworkId, setSelectedNetworkId] = useState<NetworkId | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<DataBundle | null>(null);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderReference, setOrderReference] = useState<string | null>(null);
+  const [paidWithWallet, setPaidWithWallet] = useState(false);
+
+  // ── Wallet balance (signed-in users only) — enables the "Pay with
+  // Wallet" option in OrderSummary once the balance covers the price.
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>("paystack");
+
+  useEffect(() => {
+    if (!user) {
+      setWalletBalance(null);
+      return;
+    }
+    let cancelled = false;
+    apiClient.get<{ balance: number }>("/wallet").then(({ data }) => {
+      if (!cancelled) setWalletBalance(data?.balance ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   // ── Catalogue data (networks + bundles), loaded via catalogueService ──────
   const [networks, setNetworks] = useState<NetworkOption[]>([]);
@@ -263,12 +292,18 @@ export function BuyFlow() {
     setCheckoutError(null);
     setIsProcessing(true);
 
+    const canPayWithWallet =
+      walletBalance !== null && walletBalance >= selectedBundle.price;
+    const effectiveMethod: CheckoutPaymentMethod =
+      canPayWithWallet && paymentMethod === "wallet" ? "wallet" : "paystack";
+
     const checkoutBody: CheckoutRequestBody = {
       network: selectedNetworkId,
       bundleId: selectedBundle.id,
       bundleName: selectedBundle.name,
       recipientPhone: phoneNumber.replace(/\D/g, ""),
       amount: selectedBundle.price,
+      paymentMethod: effectiveMethod,
     };
 
     const { data, error } = await apiClient.post<CheckoutResult>(
@@ -282,11 +317,20 @@ export function BuyFlow() {
       return;
     }
 
+    if (data.method === "wallet") {
+      // Already paid + fulfillment already triggered server-side — no
+      // popup, no waiting on a webhook.
+      setPaidWithWallet(true);
+      setOrderReference(data.reference);
+      setIsProcessing(false);
+      return;
+    }
+
     // Order now exists with payment_status = "pending". Open the Paystack
     // popup (falls back to a redirect if the popup can't load).
     await resumePaystackTransaction({
-      accessCode: data.accessCode,
-      authorizationUrl: data.authorizationUrl,
+      accessCode: data.accessCode ?? "",
+      authorizationUrl: data.authorizationUrl ?? "",
       onSuccess: () => {
         setOrderReference(data.reference);
         setIsProcessing(false);
@@ -305,6 +349,8 @@ export function BuyFlow() {
     setSelectedBundle(null);
     setPhoneNumber("");
     setOrderReference(null);
+    setPaidWithWallet(false);
+    setPaymentMethod("paystack");
     setCheckoutError(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -319,6 +365,7 @@ export function BuyFlow() {
         network={selectedNetwork}
         phoneNumber={phoneNumber}
         onBuyAnother={handleReset}
+        paidWithWallet={paidWithWallet}
       />
     );
   }
@@ -401,6 +448,9 @@ export function BuyFlow() {
                 onConfirm={handleConfirmOrder}
                 onEdit={goToStep}
                 isProcessing={isProcessing}
+                walletBalance={walletBalance}
+                paymentMethod={paymentMethod}
+                onPaymentMethodChange={setPaymentMethod}
               />
               {checkoutError && (
                 <p className="mt-3 text-center text-xs font-medium text-destructive">

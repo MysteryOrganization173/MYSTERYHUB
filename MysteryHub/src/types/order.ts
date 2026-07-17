@@ -36,6 +36,10 @@ export interface OrderRecord {
   paymentStatus: OrderPaymentStatus;
   paymentReference: string | null;
   fulfillmentStatus: OrderFulfillmentStatus;
+  /** The active supplier's own order/transaction id, once accepted. */
+  supplierReference: string | null;
+  /** Last customer-safe fulfillment error message, if any. */
+  fulfillmentError: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -67,6 +71,8 @@ export function mapOrderRow(row: OrderRow): OrderRecord {
     paymentStatus: row.payment_status,
     paymentReference: row.payment_reference,
     fulfillmentStatus: row.fulfillment_status,
+    supplierReference: row.supplier_reference,
+    fulfillmentError: row.fulfillment_error,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

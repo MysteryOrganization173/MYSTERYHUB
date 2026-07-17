@@ -5,6 +5,7 @@ import { AnnouncementBanner } from "@/components/layout/AnnouncementBanner";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { MobileNav } from "@/components/layout/MobileNav";
+import { ReferralCapture } from "@/components/shared/ReferralCapture";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -90,6 +91,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         <AppProviders>
+          <ReferralCapture />
           <div className="flex min-h-screen flex-col">
             {/* Top announcement strip */}
             <AnnouncementBanner />
