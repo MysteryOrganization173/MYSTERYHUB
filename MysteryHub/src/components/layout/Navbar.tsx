@@ -16,10 +16,13 @@ import {
   LogIn,
   LogOut,
   UserPlus,
+  ShieldCheck,
 } from "lucide-react";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { ROUTES } from "@/constants";
 import {
   Sheet,
   SheetContent,
@@ -94,6 +97,7 @@ export function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { user, isLoading, signOut } = useAuth();
+  const isAdmin = useIsAdmin();
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -152,6 +156,15 @@ export function Navbar() {
                   {user.fullName ?? user.email}
                 </span>
               </div>
+              {isAdmin && (
+                <Link
+                  href={ROUTES.admin}
+                  className="hidden items-center gap-1.5 rounded-lg border border-brand/30 bg-brand/10 px-2.5 py-1.5 text-xs font-semibold text-brand transition-colors hover:bg-brand/20 xl:inline-flex"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" aria-hidden />
+                  Admin
+                </Link>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -287,6 +300,19 @@ export function Navbar() {
                         {user.fullName ?? user.email}
                       </span>
                     </div>
+                    {isAdmin && (
+                      <Button
+                        asChild
+                        variant="outline-brand"
+                        className="w-full gap-2 rounded-lg"
+                        onClick={() => setOpen(false)}
+                      >
+                        <Link href={ROUTES.admin}>
+                          <ShieldCheck className="h-4 w-4" aria-hidden />
+                          Admin Console
+                        </Link>
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       className="w-full gap-2 rounded-lg"
