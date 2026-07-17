@@ -80,3 +80,22 @@ export function getInitials(name: string): string {
 export function randomBetween(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+/** Time-of-day greeting for the dashboard's personalized header, e.g.
+ * "Good evening". Uses the visitor's local device time — there is no
+ * server-side timezone concept for this app. */
+export function getTimeOfDayGreeting(date: Date = new Date()): string {
+  const hour = date.getHours();
+  if (hour < 5) return "Good night";
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
+}
+
+/** First name only, for a friendlier greeting than a full legal name. */
+export function firstName(fullName: string | null | undefined): string | null {
+  if (!fullName) return null;
+  const trimmed = fullName.trim();
+  if (!trimmed) return null;
+  return trimmed.split(/\s+/)[0];
+}

@@ -122,15 +122,25 @@ export const ordersService = {
     return { data: mapOrderRow(data), error: null };
   },
 
-  /** Updates fulfillment_status independently of payment_status. Intended
-   * caller: a future SuccessBizHub status sync (not built in this phase). */
+  /** Updates fulfillment_status independently of payment_status, plus
+   * optional supplier detail so `/track` and the admin orders view can
+   * show exactly what a real supplier said (never a fabricated status). */
   async updateFulfillmentStatus(
     reference: string,
-    fulfillmentStatus: OrderFulfillmentStatus
+    fulfillmentStatus: OrderFulfillmentStatus,
+    detail?: { supplierReference?: string | null; fulfillmentError?: string | null }
   ): Promise<ApiResponse<OrderRecord>> {
     const { data, error } = await supabaseAdminClient
       .from("orders")
-      .update({ fulfillment_status: fulfillmentStatus })
+      .update({
+        fulfillment_status: fulfillmentStatus,
+        ...(detail?.supplierReference !== undefined
+          ? { supplier_reference: detail.supplierReference }
+          : {}),
+        ...(detail?.fulfillmentError !== undefined
+          ? { fulfillment_error: detail.fulfillmentError }
+          : {}),
+      })
       .eq("reference", reference)
       .select()
       .single();
@@ -142,5 +152,59 @@ export const ordersService = {
       };
     }
     return { data: mapOrderRow(data), error: null };
+  },
+
+  /** Admin-only: lists every order, newest first. Callers are responsible
+   * for the admin check (see docs/authentication.md). */
+  async listAllOrders(limit = 200): Promise<ApiResponse<OrderRecord[]>> {
+    const { data, error } = await supabaseAdminClient
+      .from("orders")
+      .select()
+      .order("created_at", { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      return { data: null, error: error.message };
+    }
+    return { data: (data ?? []).map(mapOrderRow), error: null };
+  },
+
+  /** Admin-only: aggregate counts for the admin dashboard. Computed from
+   * a single bounded fetch (matches `listAllOrders`'s limit) rather than a
+   * separate SQL aggregate — acceptable at this scale; revisit with a
+   * Postgres view/RPC if order volume grows well past this limit. */
+  async getOrderStats(): Promise<
+    ApiResponse<{
+      totalOrders: number;
+      paidOrders: number;
+      deliveredOrders: number;
+      failedFulfillments: number;
+      totalRevenue: number;
+    }>
+  > {
+    const { data, error } = await supabaseAdminClient
+      .from("orders")
+      .select("amount, payment_status, fulfillment_status")
+      .limit(2000);
+
+    if (error) {
+      return { data: null, error: error.message };
+    }
+
+    const rows = data ?? [];
+    const paidRows = rows.filter((r) => r.payment_status === "paid");
+
+    return {
+      data: {
+        totalOrders: rows.length,
+        paidOrders: paidRows.length,
+        deliveredOrders: rows.filter((r) => r.fulfillment_status === "delivered").length,
+        failedFulfillments: rows.filter((r) => r.fulfillment_status === "failed").length,
+        totalRevenue: Number(
+          paidRows.reduce((sum, r) => sum + Number(r.amount), 0).toFixed(2)
+        ),
+      },
+      error: null,
+    };
   },
 };

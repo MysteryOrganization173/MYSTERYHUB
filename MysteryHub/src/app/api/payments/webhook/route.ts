@@ -5,10 +5,20 @@
  * then — for `charge.success` / `charge.failed` only — updates the
  * matching order's `payment_status` via `ordersService.updatePaymentStatus`.
  *
- * Explicitly does NOT:
- *   - Update `fulfillment_status` (no fulfillment happens here)
- *   - Call SuccessBizHub in any way
- *   - Trust the webhook body before the signature is verified
+ * V1.5 update: on `charge.success`, once `payment_status` is "paid", this
+ * route now also (in this order):
+ *   1. `fulfillmentService.processOrder()` — attempts real fulfillment via
+ *      the currently-active supplier (see `supplierRegistry.ts`).
+ *   2. `referralsService.creditCommission()` — credits the buyer's
+ *      referrer's wallet, if any. Idempotent by construction (unique
+ *      constraint on `referral_commissions.order_reference`), so a
+ *      duplicate webhook delivery for the same event never double-credits.
+ *
+ * Both steps run best-effort: neither one's failure changes the HTTP
+ * response Paystack sees (still 200 once the signature is valid, matching
+ * Paystack's own retry semantics) — a fulfillment or commission failure
+ * is logged, not swallowed silently, and remains visible via
+ * `orders.fulfillment_error` / the admin panel.
  *
  * Must run on the Node.js runtime (not Edge) — signature verification uses
  * Node's `crypto` module (see `webhookVerifier.ts`).
@@ -19,6 +29,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyPaystackSignature } from "@/services/payments/webhookVerifier";
 import { ordersService } from "@/services/orders";
+import { fulfillmentService } from "@/services/fulfillment";
+import { referralsService } from "@/services/referrals";
 import {
   mapPaystackChargeStatus,
   PAYSTACK_EVENTS,
@@ -48,12 +60,42 @@ export async function POST(req: NextRequest) {
   ) {
     const { reference, status, id } = event.data;
     if (reference) {
-      // payment_status only — fulfillment_status is intentionally untouched.
-      await ordersService.updatePaymentStatus(
+      const paymentStatus = mapPaystackChargeStatus(status);
+      const updateResult = await ordersService.updatePaymentStatus(
         reference,
-        mapPaystackChargeStatus(status),
+        paymentStatus,
         String(id)
       );
+
+      const order = updateResult.data;
+      if (paymentStatus === "paid" && order) {
+        // Best-effort — logged, never allowed to change this route's
+        // response to Paystack.
+        await fulfillmentService
+          .processOrder({
+            orderReference: order.reference,
+            network: order.network,
+            bundleId: order.bundleId,
+            bundleName: order.bundleName,
+            recipientPhone: order.recipientPhone,
+            amount: order.amount,
+            currency: order.currency,
+          })
+          .catch((err) => {
+            console.error(
+              `[MysteryHub] Fulfillment failed for ${order.reference}:`,
+              err
+            );
+          });
+
+        await referralsService.creditCommission(order).then(({ error }) => {
+          if (error) {
+            console.error(
+              `[MysteryHub] Referral commission crediting failed for ${order.reference}: ${error}`
+            );
+          }
+        });
+      }
     }
   }
   // Any other event type is acknowledged and ignored — no order update.

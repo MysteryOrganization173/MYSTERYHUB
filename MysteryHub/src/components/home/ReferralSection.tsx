@@ -2,12 +2,14 @@ import Link from "next/link";
 import { Users, ArrowRight, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Section } from "@/components/layout";
+import { BrandImage } from "@/components/shared/BrandImage";
+import { BANNER_IMAGES } from "@/config/images";
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
 const REFERRAL_STATS = [
-  { label: "Commission per referral", value: "Up to 5%" },
-  { label: "Payment method",          value: "Instant to wallet" },
+  { label: "Commission per order", value: "5% flat" },
+  { label: "Credited to your",     value: "Wallet, instantly" },
 ] as const;
 
 // ─── Section ──────────────────────────────────────────────────────────────────
@@ -17,6 +19,14 @@ export function ReferralSection() {
     <Section size="lg" aria-labelledby="referral-heading">
       {/* Full-bleed styled card inside the Section container */}
       <div className="relative rounded-3xl overflow-hidden border border-brand/20 bg-brand/5 p-8 sm:p-12">
+
+        {/* On-brand generated illustration, blended into the background */}
+        <div
+          aria-hidden
+          className="absolute inset-0 opacity-40 mix-blend-screen [mask-image:linear-gradient(to_left,black_0%,transparent_70%)]"
+        >
+          <BrandImage image={BANNER_IMAGES.referral} fill sizes="100vw" className="object-cover" />
+        </div>
 
         {/* Ambient glow orbs */}
         <div

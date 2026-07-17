@@ -46,6 +46,7 @@ export const authService = {
     name,
     email,
     password,
+    referralCode,
   }: SignUpCredentials): Promise<ApiResponse<AuthUser>> {
     if (!supabaseBrowserClient) {
       return { data: null, error: AUTH_NOT_CONFIGURED_ERROR };
@@ -53,7 +54,12 @@ export const authService = {
     const { data, error } = await supabaseBrowserClient.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } },
+      options: {
+        data: {
+          full_name: name,
+          ...(referralCode ? { referral_code: referralCode } : {}),
+        },
+      },
     });
 
     if (error) {

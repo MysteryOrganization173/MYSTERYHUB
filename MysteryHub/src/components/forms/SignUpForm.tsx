@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast";
+import { getReferralCookie, clearReferralCookie } from "@/components/shared/ReferralCapture";
 
 export function SignUpForm() {
   const router = useRouter();
@@ -40,10 +41,12 @@ export function SignUpForm() {
 
   async function onSubmit(values: SignUpInput) {
     setFormError(null);
+    const referralCode = getReferralCookie();
     const { data, error } = await authService.signUp({
       name: values.name,
       email: values.email,
       password: values.password,
+      referralCode,
     });
 
     if (error || !data) {
@@ -52,8 +55,13 @@ export function SignUpForm() {
       return;
     }
 
+    // Referral has now been forwarded to the signup trigger — clear it so
+    // a second, unrelated signup later on the same device doesn't
+    // mistakenly reuse it.
+    clearReferralCookie();
+
     toast.success("Account created! Redirecting you now…");
-    router.push(ROUTES.home);
+    router.push(ROUTES.dashboard);
   }
 
   return (

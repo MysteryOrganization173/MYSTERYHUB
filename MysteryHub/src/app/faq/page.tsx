@@ -1,27 +1,59 @@
 import type { Metadata } from "next";
-import { HelpCircle } from "lucide-react";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { ComingSoon } from "@/components/shared/ComingSoon";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { FAQ_CATEGORIES, getFaqItemsByCategory } from "@/data/faq";
 
 export const metadata: Metadata = {
   title: "FAQ",
-  description: "Frequently asked questions about Mystery Hub — buying, earning, wallet, and more.",
+  description:
+    "Frequently asked questions about Mystery Hub — how orders and delivery work, payments, refunds, the wallet, referral commissions, and security.",
 };
 
 export default function FaqPage() {
+  const groups = getFaqItemsByCategory();
+
   return (
-    <PageContainer>
+    <PageContainer narrow>
       <PageHeader
         badge="Help"
         title="Frequently Asked Questions"
-        description="Find answers to the most common questions about Mystery Hub — how it works, how to buy, earn, withdraw, and more."
+        description="Straight answers about how Mystery Hub actually works today — no vague promises, no features that don't exist yet."
       />
-      <ComingSoon
-        icon={<HelpCircle className="h-8 w-8 text-brand" aria-hidden />}
-        title="FAQ is being written"
-        description="Comprehensive answers to all your questions are being prepared."
-      />
+
+      <div className="mt-10 space-y-10">
+        {groups.map(({ category, items }) => (
+          <section key={category} aria-labelledby={`faq-${category}`}>
+            <h2
+              id={`faq-${category}`}
+              className="mb-3 text-sm font-semibold uppercase tracking-wide text-brand"
+            >
+              {FAQ_CATEGORIES[category]}
+            </h2>
+            <Accordion type="single" collapsible className="w-full space-y-2">
+              {items.map((item) => (
+                <AccordionItem
+                  key={item.id}
+                  value={item.id}
+                  className="card-base rounded-xl border px-5 data-[state=open]:border-brand/30 transition-colors duration-150"
+                >
+                  <AccordionTrigger className="text-sm font-semibold text-left py-4 hover:no-underline hover:text-brand [&[data-state=open]]:text-brand transition-colors duration-150">
+                    {item.question}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-4">
+                    {item.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </section>
+        ))}
+      </div>
     </PageContainer>
   );
 }

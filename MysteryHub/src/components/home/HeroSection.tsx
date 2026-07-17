@@ -3,6 +3,8 @@ import { ArrowRight, Wifi, ShieldCheck, Zap, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CTAButtonGroup } from "@/components/layout";
+import { BrandImage } from "@/components/shared/BrandImage";
+import { HERO_IMAGES } from "@/config/images";
 
 // ─── Static data ──────────────────────────────────────────────────────────────
 
@@ -20,6 +22,13 @@ export function HeroSection() {
       aria-labelledby="hero-heading"
       className="relative overflow-hidden bg-background"
     >
+      {/* On-brand generated illustration, blended into the background */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-30 mix-blend-screen [mask-image:radial-gradient(ellipse_at_center,black_0%,transparent_75%)]"
+      >
+        <BrandImage image={HERO_IMAGES.main} fill sizes="100vw" priority className="object-cover" />
+      </div>
       {/* Subtle grid texture */}
       <div
         aria-hidden
@@ -166,7 +175,7 @@ function HeroCard() {
           </div>
           <div className="rounded-xl bg-brand/10 border border-brand/20 p-3.5">
             <p className="text-[10px] font-medium text-brand/70 uppercase tracking-wide">
-              Earnings
+              Referral earnings (example)
             </p>
             <p className="text-lg font-bold text-brand mt-1">GH₵ 12.50</p>
           </div>

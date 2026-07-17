@@ -59,17 +59,23 @@ export const LOGO_IMAGES = {
     alt:    "Mystery Hub — Everything Digital. One Trusted Place.",
     width:  1200,
     height: 630,
+    cloudinaryPublicId: "mystery-hub/og-image",
   } satisfies ImageEntry,
 } as const;
 
 // ─── Hero Assets ──────────────────────────────────────────────────────────────
+// `hero-main.png` was generated on-brand for V1.5 (see
+// docs/product-audit.md, "Phase 7 — Visual assets") and is committed to
+// public/ as the working fallback; `cloudinaryPublicId` activates once
+// `npm run assets:upload` has been run against a real Cloudinary account.
 
 export const HERO_IMAGES = {
   main: {
     src:    "/images/hero/hero-main.png",
-    alt:    "Mystery Hub — digital products platform",
-    width:  1400,
-    height: 700,
+    alt:    "Mystery Hub — a premium digital services platform for Ghana",
+    width:  1600,
+    height: 900,
+    cloudinaryPublicId: "mystery-hub/hero-main",
   } satisfies ImageEntry,
 
   mobile: {
@@ -113,9 +119,10 @@ export const BANNER_IMAGES = {
 
   referral: {
     src:    "/images/banners/referral-banner.png",
-    alt:    "Refer friends and earn",
-    width:  1200,
-    height: 300,
+    alt:    "Refer friends and earn a real 5% commission on Mystery Hub",
+    width:  1600,
+    height: 900,
+    cloudinaryPublicId: "mystery-hub/referral-banner",
   } satisfies ImageEntry,
 } as const;
 
@@ -147,51 +154,39 @@ export const MARKETPLACE_IMAGES = {
 // ─── Utility / UI Assets ──────────────────────────────────────────────────────
 
 export const UTILITY_IMAGES = {
-  emptyState: {
-    src:    "/images/utilities/empty-state.svg",
-    alt:    "No results found",
-    width:  200,
-    height: 200,
+  emptyWallet: {
+    src:    "/images/utilities/empty-wallet.png",
+    alt:    "No wallet transactions yet",
+    width:  512,
+    height: 512,
+    cloudinaryPublicId: "mystery-hub/empty-wallet",
   } satisfies ImageEntry,
 
-  error: {
-    src:    "/images/utilities/error.svg",
-    alt:    "Something went wrong",
-    width:  200,
-    height: 200,
+  emptyOrders: {
+    src:    "/images/utilities/empty-orders.png",
+    alt:    "No orders yet",
+    width:  512,
+    height: 512,
+    cloudinaryPublicId: "mystery-hub/empty-orders",
   } satisfies ImageEntry,
 
-  comingSoon: {
-    src:    "/images/utilities/coming-soon.svg",
-    alt:    "Coming soon",
-    width:  300,
-    height: 200,
-  } satisfies ImageEntry,
-
-  success: {
-    src:    "/images/utilities/success.svg",
-    alt:    "Success",
-    width:  200,
-    height: 200,
-  } satisfies ImageEntry,
-
-  maintenance: {
-    src:    "/images/utilities/maintenance.svg",
-    alt:    "Under maintenance",
-    width:  300,
-    height: 200,
+  emptyReferrals: {
+    src:    "/images/utilities/empty-referrals.png",
+    alt:    "No referrals yet",
+    width:  512,
+    height: 512,
+    cloudinaryPublicId: "mystery-hub/empty-referrals",
   } satisfies ImageEntry,
 } as const;
 
 // ─── Referral Assets ──────────────────────────────────────────────────────────
 
 export const REFERRAL_IMAGES = {
-  banner: {
-    src:    "/images/referrals/referral-banner.png",
-    alt:    "Refer & earn with Mystery Hub",
-    width:  1200,
-    height: 400,
-  } satisfies ImageEntry,
+  /** Same asset as `BANNER_IMAGES.referral` — kept as one file on disk
+   * (public/images/banners/referral-banner.png) rather than duplicated
+   * under referrals/, referenced from both config groups for whichever
+   * call site reads it. */
+  banner: BANNER_IMAGES.referral,
 
   card: {
     src:    "/images/referrals/referral-card.png",

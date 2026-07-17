@@ -23,6 +23,11 @@ export interface SignUpCredentials {
   name: string;
   email: string;
   password: string;
+  /** Captured from `?ref=<code>` by `ReferralCapture` — see
+   * `src/components/shared/ReferralCapture.tsx`. Forwarded through
+   * Supabase Auth's `user_metadata` to the `handle_new_user()` trigger,
+   * which resolves it to `profiles.referred_by` at signup time. */
+  referralCode?: string | null;
 }
 
 export interface SignInCredentials {

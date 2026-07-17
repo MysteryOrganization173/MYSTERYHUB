@@ -1,11 +1,20 @@
 /**
- * POST /api/checkout — Mystery Hub V1 Phase 3 (Payment Initialization).
+ * POST /api/checkout — Mystery Hub V1 Phase 3 (Payment Initialization),
+ * extended in V1.5 to resolve the signed-in user (if any) and support the
+ * "Pay with Wallet" method.
  *
  * Thin HTTP wrapper around `checkoutService.startCheckout`. Runs the
  * "order created -> payment initialized" sequence server-side (it must —
  * both `ordersService` and `paymentService` require server-only secrets)
  * and returns everything `BuyFlow.tsx` needs to open the Paystack popup or
- * fall back to a redirect.
+ * fall back to a redirect (or, for a wallet payment, the already-final
+ * result — see `src/types/payment.ts`'s `CheckoutResult`).
+ *
+ * Resolving the user is OPTIONAL for `paymentMethod: "paystack"` (guest
+ * checkout stays supported, unchanged from V1) but REQUIRED for
+ * `paymentMethod: "wallet"` — you can't debit a wallet you don't have an
+ * account for. See `src/lib/supabase/serverAuth.ts` for why this reads an
+ * `Authorization: Bearer <token>` header instead of a cookie.
  *
  * Response shape matches `src/services/api.ts`'s `apiClient` convention:
  * on success, the JSON body IS the `CheckoutResult` (not wrapped in
@@ -22,6 +31,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkoutService } from "@/services/checkout";
 import { synthesizeGuestEmail } from "@/services/payments/guestEmail";
+import { getUserFromRequest } from "@/lib/supabase/serverAuth";
 import type { CheckoutRequestBody } from "@/types/payment";
 
 export async function POST(req: NextRequest) {
@@ -32,7 +42,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { network, bundleId, bundleName, recipientPhone, amount, email } = body ?? {};
+  const { network, bundleId, bundleName, recipientPhone, amount, email, paymentMethod } =
+    body ?? {};
 
   if (
     typeof network !== "string" ||
@@ -49,10 +60,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const user = await getUserFromRequest(req);
+
+  if (paymentMethod === "wallet" && !user) {
+    return NextResponse.json(
+      { error: "You must be signed in to pay with your wallet." },
+      { status: 401 }
+    );
+  }
+
   const customerEmail =
     typeof email === "string" && email.trim().length > 0
       ? email.trim()
-      : synthesizeGuestEmail(recipientPhone);
+      : user?.email ?? synthesizeGuestEmail(recipientPhone);
 
   const result = await checkoutService.startCheckout({
     network,
@@ -61,6 +81,8 @@ export async function POST(req: NextRequest) {
     recipientPhone,
     amount,
     email: customerEmail,
+    userId: user?.id ?? null,
+    paymentMethod,
   });
 
   if (result.error || !result.data) {

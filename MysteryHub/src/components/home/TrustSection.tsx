@@ -32,7 +32,7 @@ const TRUST_PILLARS: TrustPillar[] = [
   {
     icon:        Gift,
     title:       "Earn Rewards",
-    description: "Every purchase earns you points. Refer friends and earn a commission on every order they place, forever.",
+    description: "Share your referral link and earn a real 5% commission on every order your referrals pay for — credited to your wallet instantly, no cap.",
     color:       "purple",
   },
   {
