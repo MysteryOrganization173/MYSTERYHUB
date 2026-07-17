@@ -20,10 +20,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BrandImage } from "@/components/shared/BrandImage";
 import { apiClient } from "@/services/api";
 import { toast } from "@/components/ui/toast";
 import { formatGHS, formatDate } from "@/lib/utils";
 import { useAuth } from "@/providers/AuthProvider";
+import { UTILITY_IMAGES } from "@/config/images";
 import type { WalletTransactionRecord } from "@/types/wallet";
 import type { WithdrawalRequestRecord, WithdrawalStatus } from "@/types/withdrawal";
 
@@ -183,9 +185,12 @@ export default function DashboardWalletPage() {
             <h2 className="mb-4 text-sm font-semibold text-foreground">Transaction history</h2>
 
             {transactions && transactions.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No transactions yet. Referral commissions and wallet payments will show up here.
-              </p>
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <BrandImage image={UTILITY_IMAGES.emptyWallet} className="h-24 w-24" />
+                <p className="text-sm text-muted-foreground">
+                  No transactions yet. Referral commissions and wallet payments will show up here.
+                </p>
+              </div>
             )}
 
             {transactions && transactions.length > 0 && (

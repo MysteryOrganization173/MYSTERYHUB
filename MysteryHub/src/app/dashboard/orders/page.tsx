@@ -2,14 +2,15 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ShoppingBag } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { BrandImage } from "@/components/shared/BrandImage";
 import { apiClient } from "@/services/api";
 import { formatGHS, formatDate } from "@/lib/utils";
 import { ROUTES } from "@/constants";
+import { UTILITY_IMAGES } from "@/config/images";
 import type { OrderRecord } from "@/types/order";
 
 const PAYMENT_BADGE: Record<OrderRecord["paymentStatus"], "brand" | "muted" | "destructive"> = {
@@ -52,9 +53,7 @@ export default function DashboardOrdersPage() {
       {orders && orders.length === 0 && (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 p-10 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand">
-              <ShoppingBag className="h-6 w-6" aria-hidden />
-            </div>
+            <BrandImage image={UTILITY_IMAGES.emptyOrders} className="h-28 w-28" />
             <p className="text-sm text-muted-foreground">
               No orders yet. Once you buy a bundle, it&apos;ll show up here with live delivery
               status.

@@ -8,35 +8,13 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Section, SectionHeader } from "@/components/layout";
+import { getFeaturedFaqItems } from "@/data/faq";
 
-// ─── Static data ──────────────────────────────────────────────────────────────
+// ─── Data ─────────────────────────────────────────────────────────────────────
+// Sourced from src/data/faq.ts — also consumed by /faq, so the homepage
+// preview and the full FAQ page never drift apart.
 
-const FAQ_ITEMS = [
-  {
-    value:    "delivery",
-    question: "How fast is delivery after payment?",
-    answer:
-      "Almost all internet packages and digital services are delivered within seconds of payment confirmation. Our automated system runs 24/7 with no manual intervention needed.",
-  },
-  {
-    value:    "payment",
-    question: "What payment methods do you accept?",
-    answer:
-      "We accept MTN MoMo, AirtelTigo Money, Telecel Cash, bank transfers, and your Mystery Hub wallet balance. All payments are processed instantly and securely.",
-  },
-  {
-    value:    "security",
-    question: "Is my data and money safe with Mystery Hub?",
-    answer:
-      "Absolutely. All transactions are encrypted with bank-grade security. We never store your payment credentials, and all funds in your wallet are fully protected.",
-  },
-  {
-    value:    "referral",
-    question: "How does the referral commission work?",
-    answer:
-      "When someone signs up using your unique referral link and makes a purchase, you earn a commission. Commissions are credited instantly to your wallet and can be withdrawn at any time.",
-  },
-] as const;
+const FEATURED_FAQ_ITEMS = getFeaturedFaqItems();
 
 // ─── Section ──────────────────────────────────────────────────────────────────
 
@@ -69,13 +47,13 @@ export function FAQPreview() {
         <Accordion
           type="single"
           collapsible
-          defaultValue="delivery"
+          defaultValue={FEATURED_FAQ_ITEMS[0]?.id}
           className="w-full space-y-2"
         >
-          {FAQ_ITEMS.map((item) => (
+          {FEATURED_FAQ_ITEMS.map((item) => (
             <AccordionItem
-              key={item.value}
-              value={item.value}
+              key={item.id}
+              value={item.id}
               className="card-base rounded-xl border px-5 data-[state=open]:border-brand/30 transition-colors duration-150"
             >
               <AccordionTrigger className="text-sm font-semibold text-left py-4 hover:no-underline hover:text-brand [&[data-state=open]]:text-brand transition-colors duration-150">

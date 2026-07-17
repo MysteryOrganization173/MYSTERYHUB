@@ -12,9 +12,11 @@ import { StatGrid } from "@/components/layout/StatCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { BrandImage } from "@/components/shared/BrandImage";
 import { apiClient } from "@/services/api";
 import { toast } from "@/components/ui/toast";
 import { formatGHS, formatDate, absoluteUrl } from "@/lib/utils";
+import { UTILITY_IMAGES } from "@/config/images";
 import type { ReferralStats } from "@/types/referral";
 
 export default function DashboardReferralsPage() {
@@ -144,9 +146,12 @@ export default function DashboardReferralsPage() {
 
             {stats.commissions.length === 0 ? (
               <Card>
-                <CardContent className="p-6 text-sm text-muted-foreground">
-                  No commissions yet — they&apos;ll appear here as soon as someone you referred
-                  pays for their first order.
+                <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+                  <BrandImage image={UTILITY_IMAGES.emptyReferrals} className="h-24 w-24" />
+                  <p className="text-sm text-muted-foreground">
+                    No commissions yet — they&apos;ll appear here as soon as someone you referred
+                    pays for their first order.
+                  </p>
                 </CardContent>
               </Card>
             ) : (

@@ -21,10 +21,12 @@ import { StatGrid } from "@/components/layout/StatCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BrandImage } from "@/components/shared/BrandImage";
 import { useAuth } from "@/providers/AuthProvider";
 import { apiClient } from "@/services/api";
 import { formatGHS, formatDate, getTimeOfDayGreeting, firstName } from "@/lib/utils";
 import { ROUTES } from "@/constants";
+import { UTILITY_IMAGES } from "@/config/images";
 import type { OrderRecord } from "@/types/order";
 import type { ReferralStats } from "@/types/referral";
 
@@ -140,9 +142,7 @@ export default function DashboardPage() {
         {orders && orders.length === 0 && (
           <Card>
             <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand/10 text-brand">
-                <ShoppingBag className="h-6 w-6" aria-hidden />
-              </div>
+              <BrandImage image={UTILITY_IMAGES.emptyOrders} className="h-24 w-24" />
               <p className="text-sm text-muted-foreground">
                 You haven&apos;t placed an order yet. Your first bundle is a couple of taps away.
               </p>

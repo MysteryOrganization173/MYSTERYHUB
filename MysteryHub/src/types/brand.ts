@@ -69,6 +69,13 @@ export interface ImageEntry {
   width?: number;
   height?: number;
   blurDataURL?: string;
+  /** Cloudinary `public_id` this asset is uploaded under, once
+   * `scripts/upload-brand-assets.mjs` has been run against a real
+   * Cloudinary account. `BrandImage` renders via `next-cloudinary`'s
+   * `CldImage` when this is set and Cloudinary is configured
+   * (`NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`), falling back to the local
+   * `src` file otherwise — see src/components/shared/BrandImage.tsx. */
+  cloudinaryPublicId?: string;
 }
 
 export interface ImageDirectoryConfig {

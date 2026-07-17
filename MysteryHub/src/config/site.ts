@@ -5,7 +5,7 @@ export const siteConfig = {
   description:
     "Mystery Hub is a digital services platform for connectivity, mobile services, marketplace tools, and more — all in one trusted place.",
   url: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-  ogImage: "/images/og-image.png",
+  ogImage: "/images/logos/og-image.png",
   links: {
     twitter: "https://twitter.com/mysteryhub",
     instagram: "https://instagram.com/mysteryhub",

@@ -33,6 +33,13 @@ export const env = {
   // Analytics
   gaId: process.env.NEXT_PUBLIC_GA_ID ?? "",
 
+  // Cloudinary (public) — the cloud name is not a secret (it's part of
+  // every delivery URL), so it gets its own NEXT_PUBLIC_ var distinct from
+  // `serverEnv.cloudinaryCloudName`. Only used by `BrandImage` to decide
+  // whether to render `CldImage` (Cloudinary-hosted) or fall back to the
+  // local /public asset — see src/components/shared/BrandImage.tsx.
+  cloudinaryCloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? "",
+
   // Feature flags
   enableReferrals: process.env.NEXT_PUBLIC_ENABLE_REFERRALS === "true",
   enableAffiliates: process.env.NEXT_PUBLIC_ENABLE_AFFILIATES === "true",
@@ -134,10 +141,17 @@ export const isSuccessBizHubConfigured = Boolean(
   serverEnv.successBizHubBaseUrl && serverEnv.successBizHubApiKey
 );
 
-/** True once a Cloudinary cloud name is set — enough to *display*
- * already-uploaded assets via `res.cloudinary.com/<cloud_name>/...` (see
- * `next.config.ts`'s `images.remotePatterns`). */
+/** True once a Cloudinary cloud name is set server-side — enough to
+ * *display* already-uploaded assets via
+ * `res.cloudinary.com/<cloud_name>/...` (see `next.config.ts`'s
+ * `images.remotePatterns`). */
 export const isCloudinaryConfigured = Boolean(serverEnv.cloudinaryCloudName);
+
+/** True once `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` is set — the client-side
+ * equivalent of `isCloudinaryConfigured`, checked by `BrandImage` (a
+ * client component) before rendering `CldImage` instead of a local
+ * `next/image` fallback. */
+export const isCloudinaryDeliveryConfigured = Boolean(env.cloudinaryCloudName);
 
 /** True once full Cloudinary credentials (cloud name + key + secret) are
  * present — required for uploads, not just delivery. */
